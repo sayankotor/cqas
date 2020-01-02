@@ -39,4 +39,4 @@ def adder_page():
         </html>
     '''.format(errors=errors)
 if __name__ == "__main__":
-    app.run(host='130.141.112.137')
+    app.run(host='0.0.0.0', port='6006')
