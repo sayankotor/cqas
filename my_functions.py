@@ -96,16 +96,36 @@ class extractor:
                 except:
                     self.answ = "We can't recognize two objects for compare" 
             elif 'vs' in split_sent:
+                print ("have vs")
                 or_index = split_sent.index('vs')
+                print (or_index)
                 try:
                     obj1 = split_sent[or_index - 1]
                     obj2 = split_sent[or_index + 1]
-                    objects_list.append((obj2, obj2))
                     print (obj1, obj2)
                     self.first_object = obj1
                     self.second_object = obj2
+                    print ("self.first_object", self.first_object)
+                    print ("self.second_object", self.second_object)
                 except:
                     self.answ = "We can't recognize two objects for compare" 
+            elif 'vs.' in split_sent:
+                print ("have vs")
+                or_index = split_sent.index('vs')
+                print (or_index)
+                try:
+                    obj1 = split_sent[or_index - 1]
+                    obj2 = split_sent[or_index + 1]
+                    print (obj1, obj2)
+                    self.first_object = obj1
+                    self.second_object = obj2
+                    print ("self.first_object", self.first_object)
+                    print ("self.second_object", self.second_object)
+                except:
+                    self.answ = "We can't recognize two objects for compare" 
+            elif (self.first_object == '' and len(objects) == 1):
+                print ("elif len obj", len(objects))
+                self.first_object = objects[0]
             else:
                 self.answ = "We can't recognize two objects for compare" 
     def get_params(self):
@@ -141,9 +161,10 @@ class responser:
         return response
     
 def answerer(input_string):
-    my_extractor = extractor("what is testier bread or pizza")
+    my_extractor = extractor(input_string)
     my_responser = responser()
     obj1, obj2, predicates = my_extractor.get_params()
+    print ("len(obj1), len(obj2)", len(obj1), len(obj2))
     print ("obj1, obj2, predicates", obj1, obj2, predicates)
     if (len(obj1) > 0 and len(obj2) > 0):
         response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
@@ -152,8 +173,21 @@ def answerer(input_string):
             my_diviner = diviner()
             my_diviner.create_from_json(response_json)
             answer = my_diviner.generate_advice()
+            print ("answer", answer)
             return answer
         except:
             return ("smth wrong in response, please try again")
+    elif (len(obj1) > 0 and len(obj2) == 0):
+        print ("len(obj1) > 0 and len(obj2) == 0")
+        response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+        try:
+            response_json = response.json()
+            my_diviner = diviner()
+            my_diviner.create_from_json(response_json)
+            answer = my_diviner.generate_advice(is_object_single = True)
+            print ("answer", answer)
+            return answer  
+        except:
+            return ("smth wrong in response, please try again")
     else:
-        return ("smth wrong with objects obj1 %s obj2 %s", obj1, obj2)
+        return ("We can't recognize objects for comparision")
