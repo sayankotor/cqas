@@ -162,7 +162,7 @@ tensorboard==2.0.2
 tensorboardX==1.6
 tensorflow==1.7.0
 tensorflow-estimator==2.0.1
-tensorflow-gpu==2.0.0
+tensorflow-gpu==2.0.0a0
 testpath==0.4.2
 tifffile==2019.1.4
 toml==0.10.0
