@@ -19,7 +19,7 @@ from generation.generation import diviner
 
 # pathes to pretrained extraction model
 
-PATH_TO_PRETRAINED = '/home/vika/cqas_flask/external_pretrained_models/'
+PATH_TO_PRETRAINED = './external_pretrained_models/'
 MODEL_NAMES = ['bert_simple1.hdf5']
 
 def load(checkpoint_fn, gpu=-1):
@@ -40,7 +40,7 @@ def create_sequence_from_sentence(str_sentences):
     return [str_sentence.lower().split() for str_sentence in str_sentences]
 
 class extractor:
-    def __init__(self, input_sentence, model_name = 'bert_simple1.hdf5', model_path = '/home/vika/cqas_flask/external_pretrained_models/'):
+    def __init__(self, input_sentence, model_name = 'bert_simple1.hdf5', model_path = './external_pretrained_models/'):
         self.input_str = input_sentence
         self.answ = "UNKNOWN ERROR"
         self.model_name = model_name
