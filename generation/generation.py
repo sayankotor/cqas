@@ -28,15 +28,22 @@ class diviner:
         if (is_object_single):
             answer = str(self.obj1) + " has undeniable advantages." + "It is " + aspect_winner_str 
             return answer
-        if (len(aspect_winner_str) == 0):
-            return self.winner + "is better. " + "we don't know why"
+        if (len(aspect_winner_str) == 0 and len(aspect_other_str) == 0):
+            return self.winner + " is better. " + "we don't know why"
+        
+        elif (len(aspect_winner_str) != 0 and len(aspect_other_str) == 0):
+            return self.winner + " is better. " + self.winner + " is " + aspect_winner_str
+            
+        elif (len(aspect_winner_str) == 0 and len(aspect_other_str) != 0):
+            return self.winner + " is better. But " + self.other + " is " + aspect_other_str
+        
         templ_index = random.randint(1,3)
         print ("winnder:", self.winner, " other:", self.other)
         print ("acpect winner ", aspect_winner_str)
         print ("acpect other ", aspect_other_str)
         if (templ_index == 1):
             print('\n')
-            error_answer = str(self.winner) + " " + str(self.other) + "acpect winner " + str(self.other) + "acpect other " + str(aspect_other_str)
+            error_answer = str(self.winner) + " " + str(self.other) + " acpect winner " + str(self.other) + " acpect other " + str(aspect_other_str)
             try:
                 answer = str('The %s is preferable,because it is %s. \n Otherwise, %s is %s' %(self.winner , aspect_winner_str, self.other, aspect_other_str))
                 return answer
@@ -45,7 +52,7 @@ class diviner:
         elif (templ_index == 2):
             print('\n')
             try: 
-                answer = str('In this context, %s are preferable to %s, as it is %s.\n %s are %s' %(self.winner, self.other, aspect_winner_str, self.other.capitalize(), aspect_other_str))
+                answer = str('In this context, %s are preferable to %s, as it is %s.\n %s are %s' %(self.winner, self.other, aspect_winner_str, self.other, aspect_other_str))
                 return answer
             except (RuntimeError, TypeError, NameError):
                 return error_answer
