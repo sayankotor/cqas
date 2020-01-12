@@ -40,7 +40,7 @@ def adder_page():
                 <p>Enter comparative question:</p>
                 <form method="post" action=".">
                     <p><input name="question" style="height: 30px; width: 450px; font-size: 60%; font-family: verdana;"/></p>
-                    <p><input type="submit" value="Answer" style="height: 400px; width: 250px; font-size: 60%; font-family: verdana;"/></p>
+                    <p><input type="submit" value="Answer" style="height: 100px; width: 250px; font-size: 60%; font-family: verdana;"/></p>
                 </form>
             </body>
         </html>
