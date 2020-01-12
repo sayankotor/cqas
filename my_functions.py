@@ -157,7 +157,7 @@ class responser:
             params.update({'weight{}'.format(i + 1): weight 
                            for i, weight in enumerate(weights)})
         print ("get url")
-        response = requests.get(url=self.URL, params=params, proxies=self.proxies)
+        response = requests.get(url=self.URL, params=params)
         return response
     
 def answerer(input_string):
