@@ -6,7 +6,7 @@ import torch
 import sys
 
 # for extractor class
-sys.path.append('/home/vika/targer')
+#sys.path.append('/home/vika/targer')
 from src.factories.factory_tagger import TaggerFactory
 from src.layers import layer_context_word_embeddings_bert
 
