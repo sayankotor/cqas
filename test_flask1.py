@@ -14,8 +14,10 @@ def adder_page():
         try:
             request_string = request.form["question"]
         except:
-            errors += "<p>{!r} is not a number.</p>\n".format(request.form["question"])
+            errors += "<p>{!r} is not a string.</p>\n".format(request.form["question"])
         if request_string is not None:
+            a = "blablalba"
+            
             result = answerer(request_string)
             print ("RESULT", result)
             return '''
@@ -39,9 +41,9 @@ def adder_page():
                 {errors}
                 <p>Enter comparative question:</p>
                 <form method="post" action=".">
-                    <p><input name="question" style="height: 30px; width: 450px; font-size: 60%; font-family: verdana;"/></p>
+                    <p><input name="question" value = "What is better tea or coffee?" style="height: 30px; width: 450px; font-size: 60%; font-family: verdana;"/></p>
                     <p><input type="submit" value="Answer" style="height: 100px; width: 250px; font-size: 60%; font-family: verdana;"/></p>
-                </form>
+                </form>               
             </body>
         </html>
     '''.format(errors=errors)

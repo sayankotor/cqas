@@ -8,10 +8,10 @@ class diviner:
         self.obj2 = response_json['object2']['name']
         if self.obj1 == response_json['winner']:
             self.winner = self.obj1
-            self.winner_aspects = response_json['extractedAspectsObject1']
+            self.winner_aspects = response_json['extractedAspectsObject1'][:4]
             #self.winner_aspects = [elem for elem in self.winner_aspects if 'er' in elem]
             self.other = self.obj2
-            self.other_aspects = response_json['extractedAspectsObject2']
+            self.other_aspects = response_json['extractedAspectsObject2'][:4]
             #self.other_aspects = [elem for elem in self.other_aspects if 'er' in elem]
         else:
             self.winner = self.obj2
@@ -45,14 +45,14 @@ class diviner:
             print('\n')
             error_answer = str(self.winner) + " " + str(self.other) + " acpect winner " + str(self.other) + " acpect other " + str(aspect_other_str)
             try:
-                answer = str('The %s is preferable,because it is %s. \n Otherwise, %s is %s' %(self.winner , aspect_winner_str, self.other, aspect_other_str))
+                answer = str('The %s is preferable,because it is %s. \n Otherwise, %s is %s .' %(self.winner , aspect_winner_str, self.other, aspect_other_str))
                 return answer
             except (RuntimeError, TypeError, NameError):
                 return error_answer
         elif (templ_index == 2):
             print('\n')
             try: 
-                answer = str('In this context, %s are preferable to %s, as it is %s.\n %s are %s' %(self.winner, self.other, aspect_winner_str, self.other, aspect_other_str))
+                answer = str('In this context, %s is preferable to %s, as it is %s.\n %s is %s .' %(self.winner, self.other, aspect_winner_str, self.other, aspect_other_str))
                 return answer
             except (RuntimeError, TypeError, NameError):
                 return error_answer

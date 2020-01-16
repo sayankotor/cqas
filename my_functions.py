@@ -4,6 +4,9 @@ def do_sum(number1, number2):
 import os.path
 import torch
 import sys
+import spacy
+
+import en_core_web_sm
 
 # for extractor class
 #sys.path.append('/home/vika/targer')
@@ -40,7 +43,7 @@ def create_sequence_from_sentence(str_sentences):
     return [str_sentence.lower().split() for str_sentence in str_sentences]
 
 class extractor:
-    def __init__(self, input_sentence, model_name = 'bert_simple1.hdf5', model_path = './external_pretrained_models/'):
+    def __init__(self, input_sentence, model_name = 'bert_simple1.hdf5', model_path = '/home/vika/cqas_flask/external_pretrained_models/'):
         self.input_str = input_sentence
         self.answ = "UNKNOWN ERROR"
         self.model_name = model_name
@@ -75,62 +78,54 @@ class extractor:
         if len(objects) >= 2:
             self.first_object = objects[0]
             self.second_object = objects[1]
-        else:
-            print("We have %d objects to compare %s" %(len(objects), objects))
-            print ("sentense", words)
+        else: # try to use spacy
+            
+            print("We try to use spacy")
+            nlp = en_core_web_sm.load()
+            nlp = spacy.load("en_core_web_sm")
+            doc = nlp(input_sentence)
+            tokens = [token.text for token in doc]
             split_sent = words[0]
-            print ("split sent", split_sent)
             if 'or' in split_sent:
-                print ("have or")
-                or_index = split_sent.index('or')
-                print (or_index)
-                try:
-                    obj1 = split_sent[or_index - 1]
-                    print ("obj1", obj1)
-                    obj2 = split_sent[or_index + 1]
-                    print ("obj2", obj2)
-                    self.first_object = obj1
-                    self.second_object = obj2
-                    print ("self.first_object", self.first_object)
-                    print ("self.second_object", self.second_object)
-                except:
-                    self.answ = "We can't recognize two objects for compare" 
+                comp_elem = 'or'
             elif 'vs' in split_sent:
-                print ("have vs")
-                or_index = split_sent.index('vs')
-                print (or_index)
-                try:
-                    obj1 = split_sent[or_index - 1]
-                    obj2 = split_sent[or_index + 1]
-                    print (obj1, obj2)
-                    self.first_object = obj1
-                    self.second_object = obj2
-                    print ("self.first_object", self.first_object)
-                    print ("self.second_object", self.second_object)
-                except:
-                    self.answ = "We can't recognize two objects for compare" 
+                comp_elem = 'vs'
             elif 'vs.' in split_sent:
-                print ("have vs")
-                or_index = split_sent.index('vs')
-                print (or_index)
-                try:
-                    obj1 = split_sent[or_index - 1]
-                    obj2 = split_sent[or_index + 1]
-                    print (obj1, obj2)
-                    self.first_object = obj1
-                    self.second_object = obj2
-                    print ("self.first_object", self.first_object)
-                    print ("self.second_object", self.second_object)
-                except:
-                    self.answ = "We can't recognize two objects for compare" 
-            elif (self.first_object == '' and len(objects) == 1):
-                print ("elif len obj", len(objects))
-                self.first_object = objects[0]
+                comp_elem = 'vs.'
+            else:
+                self.answ = "We can't recognize two objects for compare"  
+                return;
+    
+            if (comp_elem in tokens):
+                or_index = tokens.index(comp_elem)
+                if (len (doc.ents) >= 2):
+                    for ent in doc.ents:
+                        print ("or index doc snet", or_index)
+                        print ("begin end ", ent.start, ent.end, ent.text)
+                        if (ent.end == or_index):
+                            print ("obj1 spacy doc sent", ent.text)
+                            self.first_object = ent.text
+                        if (ent.start == or_index + 1):
+                            print ("obj2 spacy doc sent", ent.text)
+                            self.second_object = ent.text
+
+                else:
+                    print ("or simple split_sent", or_index)
+                    try:
+                        obj1 = split_sent[or_index - 1]
+                        obj2 = split_sent[or_index + 1]
+                        print (obj1, obj2)
+                        self.first_object = obj1
+                        self.second_object = obj2
+                    except:
+                        self.answ = "We can't recognize two objects for compare" 
+
             else:
                 self.answ = "We can't recognize two objects for compare" 
+                
     def get_params(self):
         self.extract_objects_predicates(self.input_str)
-        return self.first_object, self.second_object, self.predicates
+        return self.first_object.strip(".,!/?"), self.second_object.strip(".,!/?"), self.predicates
     
 class responser:
     def __init__(self):
@@ -157,7 +152,7 @@ class responser:
             params.update({'weight{}'.format(i + 1): weight 
                            for i, weight in enumerate(weights)})
         print ("get url")
-        response = requests.get(url=self.URL, params=params)
+        response = requests.get(url=self.URL, params=params)#, proxies = self.proxies)
         return response
     
 def answerer(input_string):
