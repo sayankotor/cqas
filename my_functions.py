@@ -152,7 +152,7 @@ class responser:
             params.update({'weight{}'.format(i + 1): weight 
                            for i, weight in enumerate(weights)})
         print ("get url")
-        response = requests.get(url=self.URL, params=params)#, proxies = self.proxies)
+        response = requests.get(url=self.URL, params=params, proxies = self.proxies)
         return response
     
 def answerer(input_string):
@@ -165,20 +165,25 @@ def answerer(input_string):
         response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
         try:
             response_json = response.json()
+        except:
+            return ("smth wrong in response, please try again")
+        try:
             my_diviner = diviner()
-            my_diviner.create_from_json(response_json)
+            print (1)
+            my_diviner.create_from_json(response_json, predicates)
+            print (2)
             answer = my_diviner.generate_advice()
             print ("answer", answer)
             return answer
         except:
-            return ("smth wrong in response, please try again")
+            return ("smth wrong in diviner, please try again")
     elif (len(obj1) > 0 and len(obj2) == 0):
         print ("len(obj1) > 0 and len(obj2) == 0")
         response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
         try:
             response_json = response.json()
             my_diviner = diviner()
-            my_diviner.create_from_json(response_json)
+            my_diviner.create_from_json(response_json, predicates)
             answer = my_diviner.generate_advice(is_object_single = True)
             print ("answer", answer)
             return answer  
