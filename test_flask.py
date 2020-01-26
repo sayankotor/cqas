@@ -42,12 +42,12 @@ def adder_page():
                 <p>Enter comparative question:</p>
                 <form method="post" action=".">
                     <p><input name="question" value = "What is better for health tea or coffee?" style="height: 30px; width: 450px; font-size: 60%; font-family: verdana;"/></p>
-                    <p><input type="submit" value="Answer" style="height: 100px; width: 250px; font-size: 60%; font-family: verdana;"/></p>
+                    <p><input type="submit" value="Answer" style="height: 50px; width: 250px; font-size: 60%; font-family: verdana;"/></p>
                 </form>               
             </body>
         </html>
     '''.format(errors=errors)
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port='6007')
+    app.run(host='0.0.0.0', port='6006')
     
     

@@ -23,7 +23,7 @@ from generation.generation import diviner
 # pathes to pretrained extraction model
 
 PATH_TO_PRETRAINED = './external_pretrained_models/'
-MODEL_NAMES = ['bert_simple1.hdf5']
+MODEL_NAMES = ['bertttt.hdf5']
 
 def load(checkpoint_fn, gpu=-1):
     if not os.path.isfile(PATH_TO_PRETRAINED + checkpoint_fn):
@@ -86,6 +86,8 @@ class extractor:
             doc = nlp(input_sentence)
             tokens = [token.text for token in doc]
             split_sent = words[0]
+            print ("split_sent", split_sent)
+            print ("tokens ", tokens)
             if 'or' in split_sent:
                 comp_elem = 'or'
             elif 'vs' in split_sent:
@@ -112,8 +114,8 @@ class extractor:
                 else:
                     print ("or simple split_sent", or_index)
                     try:
-                        obj1 = split_sent[or_index - 1]
-                        obj2 = split_sent[or_index + 1]
+                        obj1 = tokens[or_index - 1]
+                        obj2 = tokens[or_index + 1]
                         print (obj1, obj2)
                         self.first_object = obj1
                         self.second_object = obj2
@@ -172,11 +174,14 @@ def answerer(input_string):
             print (1)
             my_diviner.create_from_json(response_json, predicates)
             print (2)
+        except:
+            return ("smth wrong in diviner, please try again")
+        try:
             answer = my_diviner.generate_advice()
             print ("answer", answer)
             return answer
         except:
-            return ("smth wrong in diviner, please try again")
+            return ("smth wrong in answer generation, please try again")
     elif (len(obj1) > 0 and len(obj2) == 0):
         print ("len(obj1) > 0 and len(obj2) == 0")
         response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])

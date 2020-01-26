@@ -1,8 +1,10 @@
 import random
 import string
 import sys
-sys.path.insert(0, "/home/vika/cqas_flask/generation/gpt-2-Pytorch")
-from text_gen import text_generator_for_out
+#sys.path.insert(0, "/home/vika/cqas_flask/generation/gpt-2-Pytorch")
+sys.path.insert(0, "/home/vika/cqas_flask/generation/pytorch-transformers/pytorch_transformers")
+#from text_gen import text_generator_for_out
+from text_gen_big import text_generator_for_out
 
 
 class diviner:
