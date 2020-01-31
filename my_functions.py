@@ -9,7 +9,7 @@ import spacy
 import en_core_web_sm
 
 # for extractor class
-#sys.path.append('/home/vika/targer')
+sys.path.append('/home/vika/targer')
 from src.factories.factory_tagger import TaggerFactory
 from src.layers import layer_context_word_embeddings_bert
 
@@ -20,9 +20,12 @@ import requests
 # for generate answer
 from generation.generation import diviner
 
+import os
+current_directory_path = os.path.dirname(os.path.realpath(__file__))
+
 # pathes to pretrained extraction model
 
-PATH_TO_PRETRAINED = './external_pretrained_models/'
+PATH_TO_PRETRAINED = '/external_pretrained_models/'
 MODEL_NAMES = ['bertttt.hdf5']
 
 def load(checkpoint_fn, gpu=-1):
@@ -43,7 +46,7 @@ def create_sequence_from_sentence(str_sentences):
     return [str_sentence.lower().split() for str_sentence in str_sentences]
 
 class extractor:
-    def __init__(self, input_sentence, model_name = 'bert_simple1.hdf5', model_path = './external_pretrained_models/'):
+    def __init__(self, input_sentence, model_name = 'bertttt.hdf5', model_path = current_directory_path + '/external_pretrained_models/'):
         self.input_str = input_sentence
         self.answ = "UNKNOWN ERROR"
         self.model_name = model_name
@@ -157,7 +160,7 @@ class responser:
         response = requests.get(url=self.URL, params=params, proxies = self.proxies)
         return response
     
-def answerer(input_string):
+def answerer(input_string, tp = 'big'):
     my_extractor = extractor(input_string)
     my_responser = responser()
     obj1, obj2, predicates = my_extractor.get_params()
@@ -170,29 +173,34 @@ def answerer(input_string):
         except:
             return ("smth wrong in response, please try again")
         try:
-            my_diviner = diviner()
+            my_diviner = diviner(tp = tp)
             print (1)
             my_diviner.create_from_json(response_json, predicates)
             print (2)
         except:
+            del my_extractor,my_diviner, my_responser
             return ("smth wrong in diviner, please try again")
         try:
             answer = my_diviner.generate_advice()
             print ("answer", answer)
+            del my_extractor,my_diviner, my_responser
             return answer
         except:
+            del my_extractor,my_diviner, my_responser
             return ("smth wrong in answer generation, please try again")
     elif (len(obj1) > 0 and len(obj2) == 0):
         print ("len(obj1) > 0 and len(obj2) == 0")
         response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
         try:
             response_json = response.json()
-            my_diviner = diviner()
+            my_diviner = diviner(tp = "big")
             my_diviner.create_from_json(response_json, predicates)
             answer = my_diviner.generate_advice(is_object_single = True)
             print ("answer", answer)
+            del my_extractor,my_diviner, my_responser
             return answer  
         except:
+            del my_extractor,my_diviner, my_responser
             return ("smth wrong in response, please try again")
     else:
         return ("We can't recognize objects for comparision")
