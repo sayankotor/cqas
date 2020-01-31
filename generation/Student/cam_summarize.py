@@ -104,8 +104,8 @@ def prune_graph(scores):
 def cam_summarize(input_json):
     print ("cam_summarize")
     #print (input_json)
-    tokenizer = BertTokenizer(vocab_file = current_directory_path + 'vocab.txt')
-    
+    print (current_directory_path + '/vocab.txt')
+    tokenizer = BertTokenizer(vocab_file = current_directory_path + '/vocab.txt')
     print (11)
     k = 10
     prune = True
@@ -117,7 +117,7 @@ def cam_summarize(input_json):
     print (11)
     LM = RNNModel(30522, nlayers=2, dropout = 0.0)
     print (11)
-    LM.load_state_dict(torch.load(current_directory_path + 'wikitext_lm_finetuned'))
+    LM.load_state_dict(torch.load(current_directory_path + '/wikitext_lm_finetuned'))
     print (12)
     LM = LM.to(device)
     
