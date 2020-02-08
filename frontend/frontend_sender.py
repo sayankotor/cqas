@@ -16,13 +16,13 @@ import requests
 from elasticsearch import Elasticsearch
 import re
 import json
-sys.path.insert(0, "/home/vika/cqas_flask/")
+sys.path.insert(0, "/notebook/cqas/")
 from my_functions import answerer
 
 """Spacy"""
 import spacy
 
-nlp = spacy.load('xx')
+# nlp = spacy.load('xx')
 # path = "/argsearch/"
 path = "./"
 
@@ -83,11 +83,14 @@ class Sender:
             url = create_api_url("gpt_big")
         elif generation_type == "CAM summarize":
             url = create_api_url("cam")
-        
+        elif generation_type == "extractor":
+            url = create_api_url("extractor")        
 
         try:
-            print ("url in try ", url)
+            print ("url in sender try ", url)
+            print ("text in sender try ", text)
             r = requests.post(url, data=text)
+            print ("reqerss")
             return r.json()
         except JSONDecodeError:
             print("!!!!", len(text), text)
@@ -104,17 +107,42 @@ def index():
     return render_template('template_main.html', title="Argument Entity Visualizer", page="index", path=path)
 
 
-@app.route('/search_text', methods=['POST'])
-def search_text():
+def background_process_arg():
     text = request.form.get('username')
-    confidence = request.form.get('confidence')
-    where_to_seach = request.form.getlist('where[]')  # List like ['premise', 'claim', 'named_entity', 'text']
-    return search_in_es(text, where_to_seach, confidence)
+    
+    extraction_json = sender.send(text, 'extractor')
+
+    data = []
+
+    # Arg-Mining Tags
+    classifier = request.form.get('classifier')
+    doc = sender.send(text, classifier)
+    currentPos = 0
+    for sentence in doc:
+        for token in sentence:
+            start = text.find(token["token"], currentPos)
+            end = start + len(token["token"])
+            currentPos = end
+            currentWord = {}
+            currentWord['start'] = start
+            currentWord['end'] = end
+            currentWord['type'] = token["label"]
+            data.append(currentWord)
+
+    data = do_label_arg(data)
+
+    doc = nlp(text)
+    for ent in doc.ents:
+        entry = {'start': ent.start_char, 'end': ent.end_char, 'type': ent.label_}
+        data.append(entry)
+
+    return json.dumps(data)
+
 
 
 @app.route('/label_text', methods=['POST'])
 def background_process_arg():
-    print ("background_process_arg")
+    print ("answer the question...")
     text = request.form.get('username')
     print ("text", text)
     data = []
@@ -122,37 +150,19 @@ def background_process_arg():
     # Arg-Mining Tags
     generator = request.form.get('classifier')
     print ("classifier", generator)
-    if (generator == "template"):
-        answer = answerer(text, tp = 'templates')
-    elif (generator == "gpt_big"):
-        answer = answerer(text, tp = 'big')
-    elif (generator == "gpt_small"):
-        answer = answerer(text, tp = 'small')
-    elif (generator == "CAM summarize"):
-        answer = answerer(text, tp = 'cam')
+    answer = sender.send(text, generator)
     #doc = sender.send(text, classifier)
     print ("doc !!!!", answer)
-    #currentPos = 0
-    #for sentence in doc:
-        #for token in sentence:
-            #start = text.find(token["token"], currentPos)
-            #end = start + len(token["token"])
-            #currentPos = end
-            #currentWord = {}
-            #currentWord['start'] = start
-            #currentWord['end'] = end
-            #currentWord['type'] = token["label"]
-            #data.append(currentWord)
 
-    #data = do_label_arg(data)
+    return answer#['full_answer']#json.dumps(data)
 
-    #doc = nlp(text)
-    #for ent in doc.ents:
-        #entry = {'start': ent.start_char, 'end': ent.end_char, 'type': ent.label_}
-        #data.append(entry)
 
-    return answer#json.dumps(data)
-
+@app.route('/search_text', methods=['POST'])
+def search_text():
+    text = request.form.get('username')
+    confidence = request.form.get('confidence')
+    where_to_seach = request.form.getlist('where[]')  # List like ['premise', 'claim', 'named_entity', 'text']
+    return search_in_es(text, where_to_seach, confidence)
 
 def do_label_arg(marks):
     print("marks:" + str(marks))

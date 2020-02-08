@@ -145,8 +145,8 @@ function search_action() {
 
 function label_action() {
     $("#displacy").empty()
-    document.getElementById("button_label").disabled = true;
-
+    document.getElementById("button_label").disabled = true
+    $("#displacy").text("... Please wait ...");
     $.post("./label_text", {
         username: document.getElementById("labelTextt").value,
         classifier: document.getElementById("model").value
@@ -163,13 +163,6 @@ function label_action() {
                 container: '#displacy'
             });
             text = document.getElementById("labelTextt").value
-            ents = []
-            $(".label_checkbox").each(function () {
-                if ($(this).prop('checked')) {
-                    ents.push($(this).val());
-                }
-            });
-            displacy.render(text, marks_new, ents);
             document.getElementById("button_label").disabled = false;
         })
         .fail(function (jqxhr, textStatus, error) {
