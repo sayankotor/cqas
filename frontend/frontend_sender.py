@@ -154,7 +154,7 @@ def background_process_arg():
     #doc = sender.send(text, classifier)
     print ("doc !!!!", answer)
 
-    return answer#['full_answer']#json.dumps(data)
+    return answer['full_answer']
 
 
 @app.route('/search_text', methods=['POST'])

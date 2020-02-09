@@ -25,7 +25,6 @@ Templ = diviner('templates')
 
 Cam = diviner('cam')
 
-extractor = extractor()
 
 class ReverseProxied(object):
     def __init__(self, app):
@@ -59,10 +58,10 @@ else:
 
 api = Api(app)
 
-class Extractor(Resource):
+class Extractor1(Resource):
     def post(self):
         input_string   = request.get_data().decode('UTF-8')
-        my_extractor = extractor
+        my_extractor = extractor()
         my_extractor.from_string(input_string)
         print ("9")
         my_responser = responser()
@@ -78,7 +77,7 @@ class Extractor(Resource):
 class Answerer_cam(Resource):
     def post(self):
         input_string   = request.get_data().decode('UTF-8')
-        my_extractor = extractor
+        my_extractor = extractor()
         my_extractor.from_string(input_string)
         print ("9")
         my_responser = responser()
@@ -100,7 +99,6 @@ class Answerer_cam(Resource):
                 my_diviner.create_from_json(response_json, predicates)
                 print (2)
             except:
-                del my_extractor, my_responser, my_diviner
                 return ("smth wrong in diviner, please try again")
             try:
                 answer = my_diviner.generate_advice()
@@ -118,7 +116,6 @@ class Answerer_cam(Resource):
                 answer = my_diviner.generate_advice(is_object_single = True)
                 print ("answer1", answer)  
             except:
-                del my_extractor, my_responser, my_diviner
                 answer = "smth wrong in response, please try again"
         else:
             answer = "We can't recognize objects for comparision"
@@ -132,7 +129,7 @@ class AnswererGPT2_big(Resource):
     def post(self):
         input_string   = request.get_data().decode('UTF-8')
         print ("input string ", input_string)
-        my_extractor = extractor
+        my_extractor = extractor()
         my_extractor.from_string(input_string)
         my_responser = responser()
         obj1, obj2, predicates = my_extractor.get_params()
@@ -184,7 +181,7 @@ class AnswererGPT2_small(Resource):
     def post(self):
         input_string   = request.get_data().decode('UTF-8')
         print ("input string ", input_string)
-        my_extractor = extractor
+        my_extractor = extractor()
         my_extractor.from_string(input_string)
         print ("9")
         my_responser = responser()
@@ -207,13 +204,11 @@ class AnswererGPT2_small(Resource):
                 my_diviner.create_from_json(response_json, predicates)
                 print (2)
             except:
-                del my_extractor, my_responser, my_diviner
                 return ("smth wrong in diviner, please try again")
             try:
                 answer = my_diviner.generate_advice()
                 print ("answer0", answer)
             except:
-                del my_extractor, my_responser, my_diviner
                 answer = "smth wrong in answer generation, please try again"
         elif (len(obj1) > 0 and len(obj2) == 0):
             print ("len(obj1) > 0 and len(obj2) == 0")
@@ -225,7 +220,6 @@ class AnswererGPT2_small(Resource):
                 answer = my_diviner.generate_advice(is_object_single = True)
                 print ("answer1", answer)  
             except:
-                del my_extractor, my_responser, my_diviner
                 answer = "smth wrong in response, please try again"
         else:
             answer = "We can't recognize objects for comparision"
@@ -238,7 +232,7 @@ class Answerer_templates(Resource):
     def post(self):
         input_string   = request.get_data().decode('UTF-8')
         print ("input string ", input_string)
-        my_extractor = extractor
+        my_extractor = extractor()
         my_extractor.from_string(input_string)
         print ("9")
         my_responser = responser()
@@ -258,13 +252,11 @@ class Answerer_templates(Resource):
                 my_diviner.create_from_json(response_json, predicates)
                 print (2)
             except:
-                del my_extractor, my_responser, my_diviner
                 return ("smth wrong in diviner, please try again")
             try:
                 answer = my_diviner.generate_advice()
                 print ("answer0", answer)
             except:
-                del my_extractor, my_responser, my_diviner
                 answer = "smth wrong in answer generation, please try again"
         elif (len(obj1) > 0 and len(obj2) == 0):
             print ("len(obj1) > 0 and len(obj2) == 0")
@@ -276,7 +268,6 @@ class Answerer_templates(Resource):
                 answer = my_diviner.generate_advice(is_object_single = True)
                 print ("answer1", answer)  
             except:
-                del my_extractor, my_responser, my_diviner
                 answer = "smth wrong in response, please try again"
         else:
             answer = "We can't recognize objects for comparision"
@@ -290,7 +281,7 @@ api.add_resource(AnswererGPT2_big, '/gpt_big')
 api.add_resource(AnswererGPT2_small, '/gpt_small')
 api.add_resource(Answerer_templates, '/templates')
 api.add_resource(Answerer_cam, '/cam')
-api.add_resource(Extractor, '/extractor')
+api.add_resource(Extractor1, '/extractor')
 
 
 app.jinja_env.auto_reload = True
