@@ -16,13 +16,13 @@ import requests
 from elasticsearch import Elasticsearch
 import re
 import json
-sys.path.insert(0, "/home/vika/cqas_flask/")
-from my_functions import answerer
+sys.path.insert(0, "/home/sayankotor_demo_front/cqas")
+#from my_functions import answerer
 
 """Spacy"""
 import spacy
 
-nlp = spacy.load('xx')
+#nlp = spacy.load('xx')
 # path = "/argsearch/"
 path = "./"
 
