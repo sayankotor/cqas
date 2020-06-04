@@ -146,13 +146,14 @@ function search_action() {
 function label_action() {
     $("#displacy").empty()
     document.getElementById("button_label").disabled = true
-    $("#displacy").text("... Please wait ...");
+    $('#Outputt').text("... Please wait ...");
     $.post("./label_text", {
         username: document.getElementById("labelTextt").value,
         classifier: document.getElementById("model").value
     })
         .done(function (data) {
-            $('#Outputt').val(data)
+            #$('#Outputt').val(data)
+            $('#Outputt').text("datay")
             console.log("JSON Data: " + data)
             marks = JSON.parse(data)
             marks_new = marks

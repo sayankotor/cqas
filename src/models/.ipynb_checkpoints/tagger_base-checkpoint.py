@@ -21,13 +21,13 @@ class TaggerBase(nn.Module):
         self.bert = word_seq_indexer.bert
 
     def tensor_ensure_gpu(self, tensor):
-        if self.gpu > -1:
+        if self.gpu >= -1:
             return tensor.cuda(device=self.gpu)
         else:
             return tensor
 
     def self_ensure_gpu(self):
-        if self.gpu > -1:
+        if self.gpu >= -1:
             self.cuda(device=self.gpu)
         else:
             self.cpu()
@@ -43,17 +43,13 @@ class TaggerBase(nn.Module):
     
     def predict_idx_from_words(self, word_sequences):
         self.eval()
-        self.self_ensure_gpu()
         #print ("predict idx from word")
-        try:
-            #word_sequences = self.tensor_ensure_gpu(word_sequences)
-            outputs_tensor = self.forward(word_sequences) # batch_size x num_class+1 x max_seq_len
-            #if (self.bert): #token embeddings instead of word embeddings
-                #print ("predict idx from word is bert")
-                #tokens_tensor, segments_tensor, number_word_in_seq = self.word_seq_indexer.batch_to_ids(word_sequences)
-                #word_sequences = tokens_tensor
-        except:
-            raise RuntimeError("Can't predict idx from words. Maybe it is OOM")
+        
+        outputs_tensor = self.forward(word_sequences) # batch_size x num_class+1 x max_seq_len
+        #if (self.bert): #token embeddings instead of word embeddings
+            #print ("predict idx from word is bert")
+            #tokens_tensor, segments_tensor, number_word_in_seq = self.word_seq_indexer.batch_to_ids(word_sequences)
+            #word_sequences = tokens_tensor
             
         output_idx_sequences = list()
         for k in range(len(word_sequences)):
@@ -68,6 +64,7 @@ class TaggerBase(nn.Module):
     def predict_tags_from_words(self, word_sequences, batch_size=-1):
         if batch_size == -1:
             batch_size = self.batch_size
+        #print('\n')
         batch_num = math.floor(len(word_sequences) / batch_size)
         if len(word_sequences) > 0 and len(word_sequences) < batch_size:
             batch_num = 1
@@ -81,7 +78,8 @@ class TaggerBase(nn.Module):
             curr_output_idx = self.predict_idx_from_words(word_sequences[i:j])
             curr_output_tag_sequences = self.tag_seq_indexer.idx2items(curr_output_idx)
             output_tag_sequences.extend(curr_output_tag_sequences)
-            #print('\r++ predicting, batch %d/%d (%1.2f%%).' % (n + 1, batch_num, math.ceil(n * 100.0 / batch_num)), end='', flush=True)
+            #print('\r++ predicting, batch %d/%d (%1.2f%%).' % (n + 1, batch_num, math.ceil(n * 100.0 / batch_num)),
+                  #end='', flush=True)
         return output_tag_sequences
 
     def get_mask_from_word_sequences(self, word_sequences):

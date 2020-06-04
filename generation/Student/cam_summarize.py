@@ -101,7 +101,20 @@ def prune_graph(scores):
             pruned.append(s)
     return pruned
 
-def cam_summarize(input_json):
+def load_cam_model(device):
+    try:
+        print (11, device)
+        LM = RNNModel(30522, nlayers=2, dropout = 0.0)
+        print (11)
+        LM.load_state_dict(torch.load(current_directory_path + '/wikitext_lm_finetuned'))
+        print (12)
+        LM = LM.to(device)
+    except:
+        raise RuntimeError("Can't map CAM to gpu. Maybe it is OOM")
+    return LM
+
+
+def cam_summarize(input_json, LM, device):
     print ("cam_summarize")
     #print (input_json)
     print (current_directory_path + '/vocab.txt')
@@ -111,16 +124,6 @@ def cam_summarize(input_json):
     prune = True
     exclude_common = True
     weighted_init = True
-    #stemmer = SnowballStemmer(language='english')
-    print (11)
-    device = torch.device("cuda")
-    print (11)
-    LM = RNNModel(30522, nlayers=2, dropout = 0.0)
-    print (11)
-    LM.load_state_dict(torch.load(current_directory_path + '/wikitext_lm_finetuned'))
-    print (12)
-    LM = LM.to(device)
-    
     raw_sentences = write_sentences(input_json)
     summaries = []
     sentences = []

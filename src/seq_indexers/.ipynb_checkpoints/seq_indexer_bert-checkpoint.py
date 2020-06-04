@@ -24,8 +24,8 @@ class SeqIndexerBert(SeqIndexerBaseEmbeddings):
         
         self.bert = True
         self.path_to_pretrained = path_to_pretrained
-        #self.tokenizer = tokenizer_custom_bert.FullTokenizer(path_to_pretrained + 'vocab.txt')
-        self.tokenizer = tokenizer_custom_bert.BertTokenizer.from_pretrained("https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt")
+        self.tokenizer = tokenizer_custom_bert.FullTokenizer(path_to_pretrained + 'vocab.txt')
+        #self.tokenizer = tokenizer_custom_bert.BertTokenizer.from_pretrained("https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt")
         self.emb = BertModel.from_pretrained(path_to_pretrained)
         self.frozen = model_frozen
         for param in self.emb.parameters():
@@ -78,10 +78,6 @@ class SeqIndexerBert(SeqIndexerBaseEmbeddings):
         
         tokens_tensor = torch.tensor(input_ids)
         segments_tensor = torch.tensor(np.zeros(input_ids.shape)).to(torch.int64)
-        
-        print ("in batch_to_ids")
-        print ("torch.cuda.device_of", tokens_tensor.get_device())
-        print ("torch.cuda.device_of", segments_tensor.get_device())
        
         return tokens_tensor, segments_tensor, word_in_sent_indexes
         

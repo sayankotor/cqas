@@ -39,47 +39,42 @@ class LayerContextWordEmbeddingsBert(LayerBase):
         
 
     def forward(self, word_sequences):
-        tokens_tensor, segments_tensor, number_word_in_seq = self.word_seq_indexer.batch_to_ids(word_sequences)
-        tokens_tensor = self.to_gpu(tokens_tensor)
-        segments_tensor = self.to_gpu(segments_tensor)
-        self.word_sequence  = word_sequences
-        self.token_tensor = tokens_tensor
-        self.segment_tensor = segments_tensor
-        
-        
-        
-        #print ("forward: token_tensor shape", tokens_tensor.shape)
-        #print ("forward: number_word_in_seq shape", number_word_in_seq.shape)
-        encoded_layers, _ = self.embeddings(self.token_tensor, self.segment_tensor)
-        
-        batch_embeddings = []
-        for batch_i in range(self.token_tensor.shape[0]): #batch_size
-            token_embeddings = []
-            for token_i in range(self.token_tensor.shape[1]):  #number of token in batch element
-                hidden_layers = [] 
-                for layer_i in range(len(encoded_layers)):
-                    vec = encoded_layers[layer_i][batch_i][token_i]
-                    hidden_layers.append(vec)
-                token_embeddings.append(hidden_layers)
-            summed_last_4_layers = [torch.sum(torch.stack(layer)[-4:], 0) for layer in token_embeddings]
-            summed_last_4_layers = torch.stack(summed_last_4_layers)
-            batch_embeddings.append(summed_last_4_layers)
-        
-        answer = torch.stack(batch_embeddings)        
-        
-        max_seq_len = max([len(word_seq) for word_seq in word_sequences])
-        self_tensor = torch.zeros((answer.shape[0], max_seq_len + 4, answer.shape[2])) # batch_size*max_num_word (word! not token!)*len_embedding
-        # why + 4?
-        # 2 - [cls] and [sep] - bert wrapper, 2 - extra padding for scatter_add function
-        self_tensor = self.to_gpu(self_tensor)
-        index =  self.to_gpu(number_word_in_seq)
-        index = index.unsqueeze(2)
-        index = index.repeat(1, 1, answer.shape[2])
-        #torch.save([index], 'index.pth')
-        #torch.save([answer], 'answer.pth')
-        #torch.save([self_tensor], 'self_tensor.pth')
-        self_tensor1 = self_tensor.scatter_add_(1, index, answer)
-        #torch.save([self_tensor1], 'self_tensor1.pth')
-        self_tensor1 = self_tensor1[:, 1:max_seq_len]
-        self_tensor1 = F.pad(self_tensor1, (0, 0, 0, max_seq_len - self_tensor1.shape[1], 0, 0), "constant", 0)
+        try:
+            tokens_tensor, segments_tensor, number_word_in_seq = self.word_seq_indexer.batch_to_ids(word_sequences)
+            tokens_tensor = self.to_gpu(tokens_tensor)
+            segments_tensor = self.to_gpu(segments_tensor)
+            self.word_sequence  = word_sequences
+            self.token_tensor = tokens_tensor
+            self.segment_tensor = segments_tensor
+
+            encoded_layers, _ = self.embeddings(self.token_tensor, self.segment_tensor)
+            batch_embeddings = []
+            for batch_i in range(self.token_tensor.shape[0]): #batch_size
+                token_embeddings = []
+                for token_i in range(self.token_tensor.shape[1]):  #number of token in batch element
+                    hidden_layers = [] 
+                    for layer_i in range(len(encoded_layers)):
+                        vec = encoded_layers[layer_i][batch_i][token_i]
+                        hidden_layers.append(vec)
+                    token_embeddings.append(hidden_layers)
+                summed_last_4_layers = [torch.sum(torch.stack(layer)[-4:], 0) for layer in token_embeddings]
+                summed_last_4_layers = torch.stack(summed_last_4_layers)
+                batch_embeddings.append(summed_last_4_layers)
+            answer = torch.stack(batch_embeddings)        
+            max_seq_len = max([len(word_seq) for word_seq in word_sequences])
+            self_tensor = torch.zeros((answer.shape[0], max_seq_len + 4, answer.shape[2])) # batch_size*max_num_word (word! not token!)*len_embedding
+            # why + 4?
+            # 2 - [cls] and [sep] - bert wrapper, 2 - extra padding for scatter_add function
+            self_tensor = self.to_gpu(self_tensor)
+            index =  self.to_gpu(number_word_in_seq)
+            index = index.unsqueeze(2)
+            index = index.repeat(1, 1, answer.shape[2])
+            #torch.save([index], 'index.pth')
+            #torch.save([answer], 'answer.pth')
+            #torch.save([self_tensor], 'self_tensor.pth')
+            self_tensor1 = self_tensor.scatter_add_(1, index, answer)
+            self_tensor1 = self_tensor1[:, 1:max_seq_len]
+            self_tensor1 = F.pad(self_tensor1, (0, 0, 0, max_seq_len - self_tensor1.shape[1], 0, 0), "constant", 0)
+        except:
+            raise RuntimeError("Can't predict idx from words. Maybe it is OOM 3")
         return self_tensor1

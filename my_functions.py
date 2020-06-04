@@ -46,14 +46,24 @@ def create_sequence_from_sentence(str_sentences):
     return [str_sentence.lower().split() for str_sentence in str_sentences]
 
 class extractor:
-    def __init__(self, input_sentence, model_name = 'bertttt.hdf5', model_path = current_directory_path + '/external_pretrained_models/'):
-        self.input_str = input_sentence
+    def __init__(self, my_device = 6, model_name = 'bertttt.hdf5', model_path = current_directory_path + '/external_pretrained_models/'):
         self.answ = "UNKNOWN ERROR"
         self.model_name = model_name
         self.model_path = model_path
         self.first_object = ''
         self.second_object = ''
         self.predicates = ''
+        try:
+            self.model = TaggerFactory.load(self.model_path + self.model_name, my_device)
+            self.model.cuda(device=my_device)
+            self.model.gpu = my_device
+            print ("extract_objects_predicates gpu", self.model.gpu)
+        except:
+            raise RuntimeError("Init extractor: can't map to gpu. Maybe it is OOM")
+        
+        
+    def from_string(self, input_sentence):
+        self.input_str = input_sentence
         
     def get_objects_predicates(self, list_words, list_tags):
         obj_list = []
@@ -66,14 +76,9 @@ class extractor:
         return obj_list, pred_list
     
     def extract_objects_predicates(self, input_sentence):
-        words = create_sequence_from_sentence([input_sentence])
-        print (words)
-        model = TaggerFactory.load(self.model_path + self.model_name, -1)
-        print (model.gpu)
-        #model.cuda(device=2)
-        #model.gpu = 2
-        tags = model.predict_tags_from_words(words)
-        print (tags)
+        words = create_sequence_from_sentence([input_sentence])        
+        tags = self.model.predict_tags_from_words(words)
+        print ("extract_objects_predicates tags", tags)
         objects, predicates = self.get_objects_predicates(words[0], tags[0])
         print (objects)
         print (predicates)
@@ -84,7 +89,6 @@ class extractor:
         else: # try to use spacy
             
             print("We try to use spacy")
-            nlp = en_core_web_sm.load()
             nlp = spacy.load("en_core_web_sm")
             doc = nlp(input_sentence)
             tokens = [token.text for token in doc]
@@ -129,7 +133,11 @@ class extractor:
                 self.answ = "We can't recognize two objects for compare" 
                 
     def get_params(self):
+        print ("in extractor get params 0")
+        #try:
         self.extract_objects_predicates(self.input_str)
+        #except:
+            #raise RuntimeError("Can't map to gpu. Maybe it is OOM")
         return self.first_object.strip(".,!/?"), self.second_object.strip(".,!/?"), self.predicates
     
 class responser:
@@ -157,11 +165,13 @@ class responser:
             params.update({'weight{}'.format(i + 1): weight 
                            for i, weight in enumerate(weights)})
         print ("get url")
-        response = requests.get(url=self.URL, params=params, proxies = self.proxies)
+        print ("params", params)
+        response = requests.get(url=self.URL, params=params)
         return response
     
 def answerer(input_string, tp = 'big'):
-    my_extractor = extractor(input_string)
+    my_extractor = extractor()
+    my_extractor.from_string(input_string)
     my_responser = responser()
     obj1, obj2, predicates = my_extractor.get_params()
     print ("len(obj1), len(obj2)", len(obj1), len(obj2))
@@ -178,15 +188,15 @@ def answerer(input_string, tp = 'big'):
             my_diviner.create_from_json(response_json, predicates)
             print (2)
         except:
-            del my_extractor,my_diviner, my_responser
+            #del my_extractor,my_diviner, my_responser
             return ("smth wrong in diviner, please try again")
         try:
             answer = my_diviner.generate_advice()
             print ("answer", answer)
-            del my_extractor,my_diviner, my_responser
+            #del my_extractor,my_diviner, my_responser
             return answer
         except:
-            del my_extractor,my_diviner, my_responser
+            #del my_extractor,my_diviner, my_responser
             return ("smth wrong in answer generation, please try again")
     elif (len(obj1) > 0 and len(obj2) == 0):
         print ("len(obj1) > 0 and len(obj2) == 0")
@@ -197,10 +207,10 @@ def answerer(input_string, tp = 'big'):
             my_diviner.create_from_json(response_json, predicates)
             answer = my_diviner.generate_advice(is_object_single = True)
             print ("answer", answer)
-            del my_extractor,my_diviner, my_responser
+            #del my_extractor,my_diviner, my_responser
             return answer  
         except:
-            del my_extractor,my_diviner, my_responser
+            #del my_extractor,my_diviner, my_responser
             return ("smth wrong in response, please try again")
     else:
         return ("We can't recognize objects for comparision")

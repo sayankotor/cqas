@@ -10,22 +10,41 @@ import random
 import json
 from flask import jsonify
 import json
-
+import torch
 """Models"""
 
 from generation.generation import diviner
 from my_functions import extractor
 from my_functions import responser
 
-GPT2Big = diviner('big', device = 5)
+# Path to function with generative model
+import sys
+sys.path.insert(0, "/notebook/cqas/generation/gpt-2-Pytorch")
+sys.path.insert(0, "/notebook/cqas/generation/Student")
+sys.path.insert(0, "/notebook/cqas/generation/pytorch_transformers")
 
-GPT2Small = diviner('small', device = 6)
+from cam_summarize import load_cam_model
+from text_gen_big import load_big_model
+from text_gen import load_small_model
 
-Templ = diviner('templates', device = 5)
+device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+LM_CAM = load_cam_model(device)
+Cam = diviner(tp = 'cam', model = LM_CAM, device = device)
+print ("loaded cam")
 
-Cam = diviner('cam', device = 6)
+device = torch.device("cuda:7" if torch.cuda.is_available() else "cpu")
+LM_SMALL = load_small_model(device)
+GPT2Small = diviner(tp = 'small', model = LM_SMALL, device = device)
+print ("loaded gpt2")
 
-my_extractor = extractor()
+#device = torch.device("cuda:6" if torch.cuda.is_available() else "cpu")
+#LM_BIG, tokenizer_big = load_big_model(device)
+#GPT2Big = diviner(tp = 'big', model = LM_BIG, tokenizer = tokenizer_big, device = device)
+
+Templ = diviner(tp = 'templates', model = '', device = device)
+
+my_extractor = extractor(my_device = 4)
+print ("loaded extractor")
 
 
 class ReverseProxied(object):
@@ -77,7 +96,7 @@ class Extractor1(Resource):
 
 class Answerer_cam(Resource):
     def post(self):
-        input_string   = request.get_data().decode('UTF-8')
+        input_string = request.get_data().decode('UTF-8')
         my_extractor.from_string(input_string)
         print ("9")
         my_responser = responser()
@@ -127,9 +146,8 @@ class Answerer_cam(Resource):
 
 class AnswererGPT2_big(Resource):
     def post(self):
-        input_string   = request.get_data().decode('UTF-8')
+        input_string  = request.get_data().decode('UTF-8')
         print ("input string ", input_string)
-        #my_extractor = extractor()
         my_extractor.from_string(input_string)
         my_responser = responser()
         try:
@@ -145,7 +163,7 @@ class AnswererGPT2_big(Resource):
             except:
                 return ("smth wrong in response, please try again")
             try:
-                my_diviner = GPT2Big
+                my_diviner = GPT2Small
                 print (1)
                 my_diviner.create_from_json(response_json, predicates)
                 print (2)
@@ -161,7 +179,7 @@ class AnswererGPT2_big(Resource):
             response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
             try:
                 response_json = response.json()
-                my_diviner = GPT2Big
+                my_diviner = GPT2Small
                 my_diviner.create_from_json(response_json, predicates)
                 answer = my_diviner.generate_advice(is_object_single = True)
                 print ("answer1", answer)  
@@ -179,7 +197,7 @@ class AnswererGPT2_big(Resource):
     
 class AnswererGPT2_small(Resource):
     def post(self):
-        input_string   = request.get_data().decode('UTF-8')
+        input_string = request.get_data().decode('UTF-8')
         print ("input string ", input_string)
         my_extractor.from_string(input_string)
         print ("9")
@@ -229,7 +247,7 @@ class AnswererGPT2_small(Resource):
 
 class Answerer_templates(Resource):
     def post(self):
-        input_string   = request.get_data().decode('UTF-8')
+        input_string  = request.get_data().decode('UTF-8')
         print ("input string ", input_string)
         my_extractor.from_string(input_string)
         print ("9")
