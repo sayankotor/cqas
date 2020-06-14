@@ -58,12 +58,12 @@ es = Elasticsearch(hosts=[ES_SERVER])
 
 reversed = True
 
-if (reversed):
-    app.wsgi_app = ReverseProxied(app.wsgi_app)
-    template2 = dict(swaggerUiPrefix=LazyString(lambda: request.environ.get('HTTP_X_SCRIPT_NAME', '')))
-    swagger = Swagger(app, template=template2)
-else:
-    swagger = Swagger(app)
+#if (reversed):
+    #app.wsgi_app = ReverseProxied(app.wsgi_app)
+    #template2 = dict(swaggerUiPrefix=LazyString(lambda: request.environ.get('HTTP_X_SCRIPT_NAME', '')))
+    #swagger = Swagger(app, template=template2)
+#else:
+    #swagger = Swagger(app)
 
 api = Api(app)
 
@@ -107,40 +107,7 @@ def index():
     return render_template('template_main.html', title="Argument Entity Visualizer", page="index", path=path)
 
 
-def background_process_arg():
-    text = request.form.get('username')
-    
-    extraction_json = sender.send(text, 'extractor')
-
-    data = []
-
-    # Arg-Mining Tags
-    classifier = request.form.get('classifier')
-    doc = sender.send(text, classifier)
-    currentPos = 0
-    for sentence in doc:
-        for token in sentence:
-            start = text.find(token["token"], currentPos)
-            end = start + len(token["token"])
-            currentPos = end
-            currentWord = {}
-            currentWord['start'] = start
-            currentWord['end'] = end
-            currentWord['type'] = token["label"]
-            data.append(currentWord)
-
-    data = do_label_arg(data)
-
-    doc = nlp(text)
-    for ent in doc.ents:
-        entry = {'start': ent.start_char, 'end': ent.end_char, 'type': ent.label_}
-        data.append(entry)
-
-    return json.dumps(data)
-
-
-
-@app.route('/label_text', methods=['POST'])
+@app.route('/label_text', methods=['POST', 'GET'])
 def background_process_arg():
     print ("answer the question...")
     text = request.form.get('username')
@@ -155,9 +122,6 @@ def background_process_arg():
     print ("doc ttt !!!!", answer)
 
     return answer['full_answer']
-
-def adjust_punctuation(text):
-    return re.sub(r'\s([?.!,:;\'"](?:\s|$))', r'\1', text)
 
 
 if __name__ == "__main__":

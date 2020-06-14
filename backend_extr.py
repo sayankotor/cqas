@@ -27,12 +27,12 @@ from cam_summarize import load_cam_model
 from text_gen_big import load_big_model
 from text_gen import load_small_model
 
-device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
 LM_CAM = load_cam_model(device)
 Cam = diviner(tp = 'cam', model = LM_CAM, device = device)
 print ("loaded cam")
 
-device = torch.device("cuda:7" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
 LM_SMALL = load_small_model(device)
 GPT2Small = diviner(tp = 'small', model = LM_SMALL, device = device)
 print ("loaded gpt2")
@@ -301,8 +301,8 @@ api.add_resource(Answerer_cam, '/cam')
 api.add_resource(Extractor1, '/extractor')
 
 
-app.jinja_env.auto_reload = True
-app.config['TEMPLATES_AUTO_RELOAD'] = True
-app.run(host='0.0.0.0', port=6001,debug=True)
+#app.jinja_env.auto_reload = True
+#app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.run(host='0.0.0.0', port=6001)
 
 

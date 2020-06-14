@@ -104,7 +104,7 @@ class diviner:
                     
                 elif (self.type == "small"):
                     print ("answer_begin small", answer_begin)
-                    answer_end = text_generator_for_out(answer_begin, self.model)
+                    answer_end = text_generator_for_out(answer_begin, self.model, device = self.device)
                     answer_end_str = ''.join(answer_end.splitlines()[:7])
                     print ("answer_end", answer_end)
                 elif (self.type == "big"):

@@ -38,7 +38,7 @@
     <div class=" collapse navbar-collapse" id="navbarCollapse">
         <ul class="navbar-nav mr-auto">
             <li class="nav-item">
-                <a class="nav-link" target="_blank" href="https://github.com/sayankotor/cqas_flask">Github</a>
+                <a class="nav-link" target="_blank" href="https://github.com/sayankotor/cqas">Github</a>
             </li>
         </ul>
 
@@ -52,10 +52,6 @@
         <div class="nav nav-tabs" id="nav-tab" role="tablist">
             <a class="nav-item nav-link active" id="nav-label-tab" data-toggle="tab" href="#nav-label" role="tab"
                aria-controls="nav-label" aria-selected="true">Answer the question</a>
-            <a class="nav-item nav-link" id="nav-search-tab" data-toggle="tab" href="#nav-search" role="tab"
-               aria-controls="nav-search" aria-selected="false">How to</a>
-            <a class="nav-item nav-link" id="nav-api-tab" data-toggle="tab" href="#nav-api" role="tab"
-               aria-controls="nav-api" aria-selected="false">API</a>
         </div>
     </nav>
 
@@ -69,9 +65,8 @@
                     <form>
                         <div class="form-row">
                             <div class="col-9">
-                        <textarea class="form-control" id="labelTextt"
-                                  placeholder="What is better for deep learning: Python or Matlab?" rows="5"></textarea>
-                        <textarea class="form-control" id="Outputt" rows="7"></textarea>
+                        <textarea class="form-control" id="labelTextt" rows="5">What is better for deep learning: Python or Matlab?</textarea>
+                        <textarea class="form-control" id="Outputt" rows="7" readonly></textarea>
                         </div>
                             <div class="col" style="margin-left: 15px">
                                 <div class="form-row">
@@ -83,8 +78,8 @@
                                     </select>
                                 </div>
                                 <div class="form-row">
-                                    <a class="btn btn-lg btn-primary" href="#" id="button_label"
-                                       role="button" style="margin-top: 15px">Answer</a>
+                                    <a class="btn btn-lg btn-primary" href="#" id="button_label1"
+                                       role="button" style="margin-top: 15px">Answer2</a>
                                 </div>
                             </div>
                         </div>
@@ -110,15 +105,8 @@
         
     </div>
 
-    <div id="displacy-container" class="card content-block">
-        <div class="card-body">
-            <div id="displacy"></div>
-        </div>
-    </div>
-
-
 </main>
-
+  
 <script src="{{ path }}static/js/jquery-3.3.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
         integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
@@ -127,7 +115,7 @@
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
 <script src="{{ path }}static/js/ion.rangeSlider.js"></script>
+<script type='text/javascript' src="static/js/targer2.js"></script>
 <script type='text/javascript' src="{{ path }}static/js/displacy-ent.js"></script>
-<script type='text/javascript' src="{{ path }}static/js/targer.js"></script>
 </body>
 </html>
