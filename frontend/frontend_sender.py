@@ -58,12 +58,12 @@ es = Elasticsearch(hosts=[ES_SERVER])
 
 reversed = True
 
-#if (reversed):
-    #app.wsgi_app = ReverseProxied(app.wsgi_app)
-    #template2 = dict(swaggerUiPrefix=LazyString(lambda: request.environ.get('HTTP_X_SCRIPT_NAME', '')))
-    #swagger = Swagger(app, template=template2)
-#else:
-    #swagger = Swagger(app)
+if (reversed):
+    app.wsgi_app = ReverseProxied(app.wsgi_app)
+    template2 = dict(swaggerUiPrefix=LazyString(lambda: request.environ.get('HTTP_X_SCRIPT_NAME', '')))
+    swagger = Swagger(app, template=template2)
+else:
+    swagger = Swagger(app)
 
 api = Api(app)
 
@@ -114,7 +114,7 @@ def background_process_arg():
     print ("text", text)
     data = []
 
-    # Arg-Mining Tags
+    # choose text generation type
     generator = request.form.get('classifier')
     print ("classifier", generator)
     answer = sender.send(text, generator)

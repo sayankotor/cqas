@@ -41,12 +41,13 @@ def extract_top(scores, k = 10, weighted_init = False):
 
 def write_sentences(sample, sentences = None):
     if sentences is None:
-        sentences = []
+        sentences_obj1 = []
+        sentences_obj2 = []
     for s in sample['object1']['sentences']:
-        sentences.append(s['text'] + '\n')
+        sentences_obj1.append(s['text'])
     for s in sample['object2']['sentences']:
-        sentences.append(s['text'] + '\n')
-    return sentences
+        sentences_obj2.append(s['text'])
+    return sentences_obj1, sentences_obj2
 
 def similarity(s1, s2):
     return s1.dot(s2)/np.linalg.norm(s1,2)/np.linalg.norm(s2, 2)
@@ -113,24 +114,12 @@ def load_cam_model(device):
         raise RuntimeError("Can't map CAM to gpu. Maybe it is OOM")
     return LM
 
-
-def cam_summarize(input_json, LM, device):
-    print ("cam_summarize")
-    #print (input_json)
-    print (current_directory_path + '/vocab.txt')
-    tokenizer = BertTokenizer(vocab_file = current_directory_path + '/vocab.txt')
-    print (11)
-    k = 10
+def create_sumaries(LM, sentences, raw_sentences, device):
+    k = 5
     prune = True
     exclude_common = True
     weighted_init = True
-    raw_sentences = write_sentences(input_json)
     summaries = []
-    sentences = []
-    for s in raw_sentences:
-        s = ["[CLS]"] + tokenizer.tokenize(s) + ["[SEP]"]
-        sentences.append(tokenizer.convert_tokens_to_ids(s))
-    print (13)
     hiddens = []
     for s in sentences:
         hidden = LM.init_hidden(1)
@@ -150,4 +139,34 @@ def cam_summarize(input_json, LM, device):
     top_k = extract_top(scores, k = k, weighted_init = weighted_init)
 
     summaries.append([raw_sentences[i] for i in top_k])
-    return summaries[0]
+    return (' '.join(summaries[0]))
+
+
+def cam_summarize(input_json, LM, device):
+    print ("cam_summarize")
+    #print (input_json)
+    print (current_directory_path + '/vocab.txt')
+    tokenizer = BertTokenizer(vocab_file = current_directory_path + '/vocab.txt')
+    print (11)
+    raw_sentences_obj1, raw_sentences_obj2 = write_sentences(input_json)
+    summaries = []
+    sentences_obj1 = []
+    sentences_obj2 = []
+    for s in raw_sentences_obj1:
+        s = ["[CLS]"] + tokenizer.tokenize(s) + ["[SEP]"]
+        sentences_obj1.append(tokenizer.convert_tokens_to_ids(s))
+    for s in raw_sentences_obj2:
+        s = ["[CLS]"] + tokenizer.tokenize(s) + ["[SEP]"]
+        sentences_obj2.append(tokenizer.convert_tokens_to_ids(s))
+    print (13)
+    summaries_1 = create_sumaries(LM, sentences_obj1, raw_sentences_obj1, device)
+    #print ("summaries 1 ", summaries_1)
+    summaries_2 = create_sumaries(LM, sentences_obj2, raw_sentences_obj2, device)
+    #print ("summaries 2 ", summaries_2)
+    full_text = ''
+    if (input_json['winner'] == input_json['object1']):
+        full_text = summaries_1 + '\n' + summaries_2
+    else:
+        full_text = summaries_2 + '\n' + summaries_1
+    print ("full text in cam summarize", full_text)
+    return full_text

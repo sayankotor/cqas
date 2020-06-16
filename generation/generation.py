@@ -10,6 +10,20 @@ from text_gen import text_generator_for_out
 from cam_summarize import cam_summarize
 from template_generation import generate_template
 
+import spacy 
+nlp = spacy.load("en_core_web_sm") 
+
+def create_aspect_list(aspect_list, another_list = []):
+    resulted_list = []
+    aspect_set = set(aspect_list)
+    for elem in aspect_set:
+        doc = nlp(elem)
+        if (len(elem.split()) > 1 and elem not in another_list and len(resulted_list) < 3):
+            resulted_list.append(elem)
+        elif ((doc[0].tag_ == 'JJR' or doc[0].tag_ == 'RBR') and elem not in another_list and len(resulted_list) < 3):
+            resulted_list.append(elem)
+    return resulted_list
+
 
 class diviner:
     def __init__(self, model, device, tp = "big", tokenizer = ''):
@@ -45,8 +59,22 @@ class diviner:
         print ("aspects ", self.winner_aspects, self.other_aspects)
             
     def generate_advice(self, is_object_single = False):
-        aspect_winner_str = ', '.join(self.winner_aspects)
-        aspect_other_str = ', '.join(self.other_aspects)
+        winner_list = create_aspect_list(self.winner_aspects)
+        loser_list = create_aspect_list(self.other_aspects, self.winner_aspects)
+        
+        aspect_winner_str = ''
+        aspect_other_str = ''
+        
+        if (len(winner_list) == 1):
+            aspect_winner_str = winner_list[0]
+        elif (len(winner_list) > 1):
+            aspect_winner_str = ", ".join(winner_list[:-1]) + ' and ' + winner_list[-1]
+            
+        if (len(loser_list) == 1):
+            aspect_other_str = loser_list[0]
+        elif (len(loser_list) > 1):
+            aspect_other_str = ", ".join(loser_list[:-1]) + ' and ' + loser_list[-1]
+
         
         print ("winnder:", self.winner, " other:", self.other)
         print ("acpect winner ", aspect_winner_str)
@@ -75,7 +103,7 @@ class diviner:
                 answer_middle = ''
                 if (len(aspect_winner_str) > 1):
                     answer_middle = 'The reason are ' + aspect_winner_str + '. '
-                if (len(aspect_winner_str) > 1):
+                if (len(aspect_winner_str) == 1):
                     answer_middle = 'The reason is ' + aspect_winner_str + '. '
                 answer_begin = answer_begin + answer_middle
                 print ("answer begin: ", answer_begin)
@@ -97,7 +125,7 @@ class diviner:
                         comparing_pair['loser'] = response_json['object1']['name']
                     print ("gen templates 2")
                     answer_begin = generate_template(comparing_pair, mode="extended")
-                    print ("gen templates 2", answer_begin)
+                    print ("gen templates 3", answer_begin)
                     answer_end = ''
                     answer_end_str = ''
                 
@@ -114,10 +142,10 @@ class diviner:
                     answer_end_str = ''.join(answer_end.splitlines()[:7])
                     print ("answer_end", answer_end_str)
                 elif (self.type == 'cam'):
-                    print ("answer_begin cam", answer_begin)
-                    answer_end = cam_summarize(self.json, self.model, self.device)[:7]
-                    answer_end_str = ''.join(answer_end)
-                    print ("answer_end cam", answer_end)
+                    print ("answer_begin1 cam", answer_begin)
+                    answer_end_str = cam_summarize(self.json, self.model, self.device)
+                    #answer_end_str = ''.join(answer_end)
+                    print ("answer_end1 cam", answer_end_str)
 
-                print ("full answer ", answer_begin + answer_middle + answer_end_str)
+                print ("full answer ", answer_begin + answer_end_str)
         return answer_begin + answer_end_str

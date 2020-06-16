@@ -27,6 +27,11 @@ from cam_summarize import load_cam_model
 from text_gen_big import load_big_model
 from text_gen import load_small_model
 
+import configparser
+config_parser = configparser.ConfigParser()
+config_parser.read('frontend/config.ini')
+config = config_parser['DEV']
+
 device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
 LM_CAM = load_cam_model(device)
 Cam = diviner(tp = 'cam', model = LM_CAM, device = device)
@@ -45,7 +50,6 @@ Templ = diviner(tp = 'templates', model = '', device = device)
 
 my_extractor = extractor(my_device = 4)
 print ("loaded extractor")
-
 
 class ReverseProxied(object):
     def __init__(self, app):
@@ -77,21 +81,12 @@ if(reversed):
 else:
 	swagger = Swagger(app)
 
+
 api = Api(app)
 
-class Extractor1(Resource):
-    def post(self):
-        input_string   = request.get_data().decode('UTF-8')
-        my_extractor.from_string(input_string)
-        print ("9")
-        my_responser = responser()
-        print ("9")
-        obj1, obj2, predicates = my_extractor.get_params()
-        print ("9")
-        print ("len(obj1), len(obj2)", len(obj1), len(obj2))
-        print ("obj1, obj2, predicates", obj1, obj2, predicates)
-        response = make_response(jsonify(first_object = obj1, second_object = obj2, preds = predicates))
-        return response
+@app.route('/')
+
+def index():
     
 
 class Answerer_cam(Resource):
@@ -303,6 +298,6 @@ api.add_resource(Extractor1, '/extractor')
 
 #app.jinja_env.auto_reload = True
 #app.config['TEMPLATES_AUTO_RELOAD'] = True
-app.run(host='0.0.0.0', port=6001)
+app.run(host='0.0.0.0', port=int(config["backend_port"]))
 
 

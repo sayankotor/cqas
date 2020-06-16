@@ -55,7 +55,8 @@ function label_action() {
     document.getElementById("button_label1").innerHTML = "YOU CLICKED ME 8!";
     $.post("./label_text", {
         username: document.getElementById("labelTextt").value,
-        classifier: document.getElementById("model").value
+        classifier: document.getElementById("model").value,
+        $('#Outputt').val("=^.^=")
     })
         .done(function (data) {
             $('#Outputt').val(data)
