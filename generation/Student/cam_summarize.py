@@ -160,11 +160,13 @@ def cam_summarize(input_json, LM, device):
         sentences_obj2.append(tokenizer.convert_tokens_to_ids(s))
     print (13)
     summaries_1 = create_sumaries(LM, sentences_obj1, raw_sentences_obj1, device)
-    #print ("summaries 1 ", summaries_1)
+    print ("summaries 1 ", summaries_1, '\n')
     summaries_2 = create_sumaries(LM, sentences_obj2, raw_sentences_obj2, device)
-    #print ("summaries 2 ", summaries_2)
+    print ("summaries 2 ", summaries_2, '\n')
     full_text = ''
-    if (input_json['winner'] == input_json['object1']):
+    print (input_json['winner'] == input_json['object1']['name'])
+    print (input_json['winner'], input_json['object1']['name'])
+    if (input_json['winner'] == input_json['object1']['name']):
         full_text = summaries_1 + '\n' + summaries_2
     else:
         full_text = summaries_2 + '\n' + summaries_1

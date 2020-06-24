@@ -53,6 +53,7 @@ class extractor:
         self.first_object = ''
         self.second_object = ''
         self.predicates = ''
+        self.spans = [] # we can't use set because span object is dict and dict is unchashable. We add function add_span to keep non-repeatability
         try:
             self.model = TaggerFactory.load(self.model_path + self.model_name, my_device)
             self.model.cuda(device=my_device)
@@ -60,10 +61,23 @@ class extractor:
             print ("extract_objects_predicates gpu", self.model.gpu)
         except:
             raise RuntimeError("Init extractor: can't map to gpu. Maybe it is OOM")
-        
+            
+    def add_span(self, span_obj):
+        if span_obj not in self.spans:
+            self.spans.append(span_obj)
+      
+    def get_words():
+        return self.words
+    
+    def get_tags():
+        return self.tags
         
     def from_string(self, input_sentence):
         self.input_str = input_sentence
+        self.first_object = ''
+        self.second_object = ''
+        self.predicates = ''
+        self.spans = []
         
     def get_objects_predicates(self, list_words, list_tags):
         obj_list = []
@@ -71,30 +85,52 @@ class extractor:
         for ind, elem in enumerate(list_tags):
             if elem == 'B-OBJ':
                 obj_list.append(list_words[ind])
+                start = self.input_str.lower().find(list_words[ind])
+                self.spans.append({'end': start + len(list_words[ind]), 'start': start, 'type': "OBJ" })
+            if elem == 'I-OBJ':
+                start = self.input_str.lower().find(list_words[ind])
+                self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "OBJ" })
             if elem == 'B-PREDFULL':
-                pred_list.append(list_words[ind])    
+                pred_list.append(list_words[ind])
+                start = self.input_str.lower().find(list_words[ind])
+                self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "PRED" })
+            if elem == 'I-PREDFULL':
+                start = self.input_str.lower().find(list_words[ind])
+                self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "PRED" })
         return obj_list, pred_list
     
     def extract_objects_predicates(self, input_sentence):
-        words = create_sequence_from_sentence([input_sentence])        
+        words = create_sequence_from_sentence([input_sentence])  
         tags = self.model.predict_tags_from_words(words)
-        print ("extract_objects_predicates tags", tags)
+        print ("extract_objects_predicates tags", tags[0])
+        print ("extract_objects_predicates words", words[0])
         objects, predicates = self.get_objects_predicates(words[0], tags[0])
         print (objects)
         print (predicates)
         self.predicates = predicates
+        print ("len(objects)", len(objects))
         if len(objects) >= 2:
             self.first_object = objects[0]
             self.second_object = objects[1]
         else: # try to use spacy
+            
+            if len(objects) == 1:
+                self.first_object = objects[0]
+                self.second_object = ''
             
             print("We try to use spacy")
             nlp = spacy.load("en_core_web_sm")
             doc = nlp(input_sentence)
             tokens = [token.text for token in doc]
             split_sent = words[0]
-            print ("split_sent", split_sent)
-            print ("tokens ", tokens)
+            
+            if (len(self.predicates) == 0):
+                for ind, token in enumerate(doc):
+                    if (doc[ind].tag_ == 'JJR' or doc[ind].tag_ == 'RBR'):
+                        self.predicates = doc[ind].text
+                        self.add_span({'end': self.input_str.lower().find(doc[ind].text) + len(doc[ind].text), 'start': self.input_str.lower().find(doc[ind].text), 'type': "PRED" })
+                        break
+            
             if 'or' in split_sent:
                 comp_elem = 'or'
             elif 'vs' in split_sent:
@@ -102,35 +138,36 @@ class extractor:
             elif 'vs.' in split_sent:
                 comp_elem = 'vs.'
             else:
-                self.answ = "We can't recognize two objects for compare"  
-                return;
-    
+                self.answ = "We can't recognize two objects for compare 0"
+                return
+            print ("comp_elem", comp_elem)
+            print ("tokens", tokens)
             if (comp_elem in tokens):
-                or_index = tokens.index(comp_elem)
+                or_index = tokens.index(comp_elem)               
                 if (len (doc.ents) >= 2):
                     for ent in doc.ents:
-                        print ("or index doc snet", or_index)
-                        print ("begin end ", ent.start, ent.end, ent.text)
                         if (ent.end == or_index):
-                            print ("obj1 spacy doc sent", ent.text)
                             self.first_object = ent.text
+                            self.add_span({'end': ent.end,'start': ent.start, 'type': "OBJ" })
                         if (ent.start == or_index + 1):
-                            print ("obj2 spacy doc sent", ent.text)
                             self.second_object = ent.text
+                            self.add_span({'end': ent.end, 'start': ent.start, 'type': "OBJ" })
+                            
 
                 else:
                     print ("or simple split_sent", or_index)
                     try:
-                        obj1 = tokens[or_index - 1]
+                        obj1 = tokens[or_index - 1] # tokens are uppercase. self.input_str is uppercase
                         obj2 = tokens[or_index + 1]
                         print (obj1, obj2)
                         self.first_object = obj1
                         self.second_object = obj2
+                        self.add_span({'end': self.input_str.find(obj1) + len(obj1), 'start': self.input_str.find(obj1), 'type': "OBJ" })
+                        self.add_span({'end': self.input_str.find(obj2) + len(obj2), 'start': self.input_str.find(obj2), 'type': "OBJ" })
                     except:
-                        self.answ = "We can't recognize two objects for compare" 
-
+                        self.answ = "We can't recognize two objects for compare 1" 
             else:
-                self.answ = "We can't recognize two objects for compare" 
+                self.answ = "We can't recognize two objects for compare 2" 
                 
     def get_params(self):
         print ("in extractor get params 0")

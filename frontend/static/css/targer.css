@@ -132,6 +132,34 @@ body {
     background: #bbb
 }
 
+
+[data-entity][data-entity="obj"] {
+     background: rgba(166, 226, 45, 0.2);
+     border-color: rgb(166, 226, 45); 
+}
+
+[data-entity][data-entity="obj"]::after {
+     background: rgb(166, 226, 45); 
+}
+
+[data-entity][data-entity="asp"] {
+     background: rgba(224, 0, 132, 0.2);
+     border-color: rgb(224, 0, 132); 
+}
+
+[data-entity][data-entity="asp"]::after {
+     background: rgb(224, 0, 132); 
+}
+
+[data-entity][data-entity="pred"] {
+     background: rgba(224, 0, 132, 0.2);
+     border-color: rgb(224, 0, 132); 
+}
+
+[data-entity][data-entity="pred"]::after {
+     background: rgb(224, 0, 132); 
+}
+
 .doc_url{
     color:#4357AD
 }

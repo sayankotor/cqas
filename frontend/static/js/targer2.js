@@ -6,6 +6,11 @@ var search_items = Array("single gender schools", "death penalty", "asylum", "ch
 
 var item = items[Math.floor(Math.random() * items.length)];
 
+const displacy = new displaCyENT('https://api.explosion.ai/displacy/ent/', {
+                container: '#displacy1'
+            });
+
+
 
 $('#labelTextt').val(item)
 document.getElementById("button_label1").disabled = false;
@@ -15,22 +20,31 @@ document.getElementById("button_label1").addEventListener('click',function ()
     document.getElementById("button_label1").innerHTML = "Processing";
     document.getElementById("button_label1").disabled = true;
     $("#button_label1").prop('disabled', true);
+    document.getElementById("displacy1").innerHTML = "Displacy";
     $.post("./label_text", {
         username: document.getElementById("labelTextt").value,
         classifier: document.getElementById("model").value,
     })
         .done(function (data) {
             document.getElementById("button_label1").disabled = false;
-            document.getElementById("button_label1").innerHTML = "Answer1";
-            $('#Outputt').val(data)
-            console.log("JSON Data: " + data)
-            marks = JSON.parse(data)
-            marks_new = marks
+        document.getElementById("displacy1").innerHTML = "Searching ...";
+            document.getElementById("button_label1").innerHTML = "Answer11";
+            $('#Outputt').val(data["full_answer"])
+            document.getElementById("displacy1").innerHTML = "Extracting ..."
+        
+            $('#displacy-container1').show();
+            $("#displacy1").empty();
+            var d = data["spans"]
+            console.log("d")
+            console.log(d)
+            $("#displacy1").text("Searching 0 ...");
+            $("#displacy1").val(data["spans"])
+            const text = document.getElementById("labelTextt").value;
+            const spans = data["spans"];
+            const ents = ['obj', 'pred'];
+            displacy.render(text, spans, ents);
+            
 
-            console.log(marks_new);
-            const displacy = new displaCyENT('https://api.explosion.ai/displacy/ent/', {
-                container: '#displacy'
-            });
         })
         .fail(function (jqxhr, textStatus, error) {
             $('#Outputt').val("Something went wrong")

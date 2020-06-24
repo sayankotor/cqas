@@ -86,7 +86,8 @@ class diviner:
             answer_begin = answer_begin + "They are " + aspect_winner_str + '.'
         
             if (len(aspect_winner_str) == 0 and len(aspect_other_str) == 0):
-                answer_begin = self.winner + " is better"
+                answer_begin = self.winner + " is better."
+            return answer_begin
         
         templ_index = random.randint(1,3)
         print ("winnder:", self.winner, " other:", self.other)

@@ -86,7 +86,7 @@ api = Api(app)
 
 @app.route('/')
 
-def index():
+#def index():
     
 
 class Answerer_cam(Resource):
@@ -103,6 +103,7 @@ class Answerer_cam(Resource):
         print ("9")
         print ("len(obj1), len(obj2)", len(obj1), len(obj2))
         print ("obj1, obj2, predicates", obj1, obj2, predicates)
+        print ("spans", my_extractor.spans)
         if (len(obj1) > 0 and len(obj2) > 0):
             response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
             try:
@@ -134,7 +135,7 @@ class Answerer_cam(Resource):
                 answer = "smth wrong in response, please try again"
         else:
             answer = "We can't recognize objects for comparision"
-        response = make_response(jsonify(full_answer = answer))
+        response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
         response.headers['content-type'] = 'application/json'
         return response
 
@@ -183,7 +184,7 @@ class AnswererGPT2_big(Resource):
                 answer = "smth wrong in response, please try again"
         else:
             answer = "We can't recognize objects for comparision"
-        response = make_response(jsonify(full_answer = answer))
+        response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
         del my_extractor, my_responser, my_diviner
         response.headers['content-type'] = 'application/json'
         return response
@@ -236,7 +237,7 @@ class AnswererGPT2_small(Resource):
                 return ("smth wrong in response, please try again")
         else:
             answer = "We can't recognize objects for comparision"
-        response = make_response(jsonify(full_answer = answer))
+        response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
         response.headers['content-type'] = 'application/json'
         return response
 
@@ -284,7 +285,7 @@ class Answerer_templates(Resource):
                 return("smth wrong in response, please try again")
         else:
             answer = "We can't recognize objects for comparision"
-        response = make_response(jsonify(full_answer = answer))
+        response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
         response.headers['content-type'] = 'application/json'
         return response
 
@@ -293,7 +294,7 @@ api.add_resource(AnswererGPT2_big, '/gpt_big')
 api.add_resource(AnswererGPT2_small, '/gpt_small')
 api.add_resource(Answerer_templates, '/templates')
 api.add_resource(Answerer_cam, '/cam')
-api.add_resource(Extractor1, '/extractor')
+#api.add_resource(Extractor1, '/extractor')
 
 
 #app.jinja_env.auto_reload = True

@@ -27,6 +27,8 @@
 
     <link href="{{ path }}static/css/targer.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ path }}static/css/ion.rangeSlider.css">
+    <link rel="icon" href="data:;base64,=">
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
 </head>
 <body>
 <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
@@ -78,6 +80,13 @@
                                     </select>
                                 </div>
                                 <div class="form-row">
+                                    <label for="extractor">Model to extract with</label>
+                                    <select class="form-control" id="model">
+                                        <option value="comparely">Comparely</option>
+                                        <option value="aurora">Aurora</option>
+                                    </select>
+                                </div>
+                                <div class="form-row">
                                     <a class="btn btn-lg btn-primary" href="#" id="button_label1"
                                        role="button" style="margin-top: 15px">Answer2</a>
                                 </div>
@@ -100,6 +109,12 @@
             </div>
         </div>
     </div>
+    
+    <div id="displacy-container1" class="card content-block">
+        <div class="card-body">
+            <div id="displacy1"></div>
+        </div>
+    </div>
 
     <div id="controls" class="card content-block">
         
@@ -115,7 +130,7 @@
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
 <script src="{{ path }}static/js/ion.rangeSlider.js"></script>
-<script type='text/javascript' src="static/js/targer2.js"></script>
 <script type='text/javascript' src="{{ path }}static/js/displacy-ent.js"></script>
+<script type='text/javascript' src="static/js/targer2.js"></script>
 </body>
 </html>

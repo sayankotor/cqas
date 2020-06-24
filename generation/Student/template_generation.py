@@ -28,7 +28,7 @@ def generate_template(comparing_pair, mode='default'):
         first_comparing_sentence_parts.append("It's simple! {Winner} is better, because of {win_asp}.")
         first_comparing_sentence_parts.append("After much thought, I realized that  {winner} is better, because of {win_asp}.")
         first_comparing_sentence_parts.append("I came to the conclusion that {winner} is better, because of {win_asp}.")
-        second_comparing_sentence_parts.append(" {Looser} is {los_asp}.")
+        second_comparing_sentence_parts.append(" {Looser} is {lose_asp}.")
         second_comparing_sentence_parts.append(" But you should know that {looser} is {lose_asp}.")
         second_comparing_sentence_parts.append(" But it will be useful for you to know that {looser} is {lose_asp}.")
         second_comparing_sentence_parts.append(" But i should tell you that {looser} is {lose_asp}.")
@@ -50,7 +50,7 @@ def generate_template(comparing_pair, mode='default'):
         else:
             winner_list = create_aspect_list(comparing_pair['winner_aspects'])
             winner_aspects_string = ", ".join(winner_list[:-1]) + ' and ' + winner_list[-1]
-        print ("winner_aspects_string", winner_aspects_string)
+        print ("winner_aspects_string1", winner_aspects_string)
         if (len(comparing_pair['loser_aspects']) < 1):
             loser_aspects_string = "not promising"
         elif (len(comparing_pair['loser_aspects']) == 1):
@@ -58,14 +58,14 @@ def generate_template(comparing_pair, mode='default'):
         else:
             loser_list = create_aspect_list(comparing_pair['loser_aspects'], winner_list)
             loser_aspects_string = ", ".join(loser_list[:-1]) + ' and ' + loser_list[-1]
-        print ("looser_aspects_string", loser_aspects_string)
+        print ("looser_aspects_string1", loser_aspects_string)
         response = extented_templates[template_index].format(winner = comparing_pair['winner'],
                                                              win_asp = winner_aspects_string,
                                                              looser = comparing_pair['loser'], 
                                                              lose_asp = loser_aspects_string, 
                                                              Looser = comparing_pair['loser'].capitalize(),
                                                              Winner = comparing_pair['winner'].capitalize())
-        print ("make response")
+        print ("make response ", response)
     else:
         mode = "default"
     if mode == 'default':

@@ -17,7 +17,7 @@ from elasticsearch import Elasticsearch
 import re
 import json
 sys.path.insert(0, "/notebook/cqas/")
-from my_functions import answerer
+#from my_functions import answerer
 
 """Spacy"""
 import spacy
@@ -121,7 +121,7 @@ def background_process_arg():
     #doc = sender.send(text, classifier)
     print ("doc ttt !!!!", answer)
 
-    return answer['full_answer']
+    return answer
 
 
 if __name__ == "__main__":
