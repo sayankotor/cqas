@@ -10,6 +10,7 @@ import en_core_web_sm
 
 # for extractor class
 sys.path.append('/home/vika/targer')
+sys.path.append('/notebook/cqas')
 from src.factories.factory_tagger import TaggerFactory
 from src.layers import layer_context_word_embeddings_bert
 
@@ -143,6 +144,7 @@ class extractor:
             print ("comp_elem", comp_elem)
             print ("tokens", tokens)
             if (comp_elem in tokens):
+                print ("comp elem in tokens")
                 or_index = tokens.index(comp_elem)               
                 if (len (doc.ents) >= 2):
                     for ent in doc.ents:
