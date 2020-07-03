@@ -43,6 +43,49 @@ def count_overlap(ngram, ngram_emb, list_of_ngrams2, list_of_ngrams2_embs): # on
     return max(overlaps)
 
 def score_ngrams(target_ngrams, prediction_ngrams):
+    intersection_ngrams_count_pred = 0
+    intersection_ngrams_count_tg = 0
+    
+    #print ("target_ngrams", target_ngrams)
+    #print ("prediction_ngrams", prediction_ngrams)
+    
+    embeddings_target = bert_embedding([' '.join(elem)for elem in list(target_ngrams.keys())])
+    embeddings_predictions = bert_embedding([' '.join(elem)for elem in list(prediction_ngrams.keys())])
+    
+    for ind, ngram in enumerate(list(target_ngrams.keys())):
+        #print ("ind", ind)
+        intersection_ngrams_count_tg += min(target_ngrams[ngram],
+                                         prediction_ngrams[ngram])
+        #print ("min", min(target_ngrams[ngram], prediction_ngrams[ngram]))
+        if (min(target_ngrams[ngram], prediction_ngrams[ngram]) == 0):
+            #print ("ngram", ngram)
+            #print ('overlap')
+            overlap_ngram = count_overlap(ngram, embeddings_target[ind][1], prediction_ngrams, embeddings_predictions) #по всем н-грамам
+            #print ('overlap ngram', overlap_ngram)
+            intersection_ngrams_count_tg += overlap_ngram
+            
+    for ind, ngram in enumerate(list(prediction_ngrams.keys())):
+        #print ("ind", ind)
+        intersection_ngrams_count_tg += min(target_ngrams[ngram],
+                                         prediction_ngrams[ngram])
+        #print ("min", min(target_ngrams[ngram], prediction_ngrams[ngram]))
+        if (min(target_ngrams[ngram], prediction_ngrams[ngram]) == 0):
+            #print ("ngram", ngram)
+            #print ('overlap')
+            overlap_ngram = count_overlap(ngram, embeddings_predictions[ind][1], prediction_ngrams, embeddings_target) #по всем н-грамам
+            #print ('overlap ngram', overlap_ngram)
+            intersection_ngrams_count_pred += overlap_ngram
+            
+    target_ngrams_count = sum(target_ngrams.values())
+    prediction_ngrams_count = sum(prediction_ngrams.values())
+    
+    precision = intersection_ngrams_count_pred / max(prediction_ngrams_count, 1)
+    recall = intersection_ngrams_count_tg / max(target_ngrams_count, 1)
+    
+    f = fmeasure(precision, recall)
+    return f, precision, recall
+
+def score_ngrams_v0(target_ngrams, prediction_ngrams):
     intersection_ngrams_count = 0
     
     #print ("target_ngrams", target_ngrams)
