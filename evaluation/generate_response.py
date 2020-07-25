@@ -2,7 +2,7 @@ import csv
 import pandas as pd
 import pickle
 
-from gen import generate_one_answer
+from gen import generate_one_answer, generate_one_answer_with_defined_objects
 
 import sys
 import torch
@@ -12,30 +12,28 @@ sys.path.insert(0, "/notebook/cqas/generation/Student")
 sys.path.insert(0, "/notebook/cqas/generation/pytorch_transformers")
 
 from generation.generation import diviner
-from my_functions1 import extractor
+from my_functions import extractor
 from my_functions import responser
 
 from cam_summarize import load_cam_model
 from text_gen_big import load_big_model
 from text_gen import load_small_model
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-LM_CAM = load_cam_model(device)
-Cam = diviner(tp = 'cam', model = LM_CAM, device = device)
-print ("loaded cam")
+#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#LM_CAM = load_cam_model(device)
+#Cam = diviner(tp = 'cam', model = LM_CAM, device = device)
+#print ("loaded cam")
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
 LM_SMALL = load_small_model(device)
 GPT2Small = diviner(tp = 'small', model = LM_SMALL, device = device)
+#GPT2Small_vs = diviner(tp = 'small_vs', model = LM_SMALL, device = device)
+#GPT2Small_vs_str = diviner(tp = 'small_vs_str', model = LM_SMALL, device = device)
 print ("loaded gpt2")
-
-#device = torch.device("cuda:6" if torch.cuda.is_available() else "cpu")
-#LM_BIG, tokenizer_big = load_big_model(device)
-#GPT2Big = diviner(tp = 'big', model = LM_BIG, tokenizer = tokenizer_big, device = device)
 
 Templ = diviner(tp = 'templates', model = '', device = device)
 
-my_extractor = extractor(my_device = 0)
+my_extractor = extractor(my_device = 3)
 print ("loaded extractor")
 
 
@@ -49,35 +47,54 @@ def main():
             if (ind > 0):
                 df = df.append(d, ignore_index=True)
             
-    templ_answ_list = []
+        
+    #gpt_answ_list = []
+    #for ind, qw in enumerate(df['Question'].values):
+        #print (ind, '\n\n')
+        #answ = generate_one_answer(qw, my_extractor, GPT2Small)
+        #print (answ)
+        #gpt_answ_list.append(answ)
+        
+    #with open('gpt_tldr_inp.pkl', 'wb') as f:
+        #pickle.dump(gpt_answ_list, f)
+        
+    print ("gpt_tldr_inp")
+    
+    gpt_answ_list = []
     for ind, qw in enumerate(df['Question'].values):
         print (ind, '\n\n')
-        answ = generate_one_answer(qw, my_extractor, Cam)
+        obj1 = df['Object 1'].values[ind]
+        obj2 = df['Object 2'].values[ind]
+        answ = generate_one_answer_with_defined_objects(obj1, obj2, GPT2Small)
         print (answ)
-        templ_answ_list.append(answ)
+        gpt_answ_list.append(answ)
         
-    with open('cam_answers1.pkl', 'wb') as f:
-        pickle.dump(templ_answ_list, f)
+    with open('gpt_tldr3_inp.pkl', 'wb') as f:
+        pickle.dump(gpt_answ_list, f)
         
-    templ_answ_list = []
-    for ind, qw in enumerate(df['Question'].values):
-        print (ind, '\n\n')
-        answ = generate_one_answer(qw, my_extractor, Templ)
-        print (answ)
-        templ_answ_list.append(answ)
+    #gpt_answ_list = []
+    #for ind, qw in enumerate(df['Question'].values):
+        #print (ind, '\n\n')
+        #answ = generate_one_answer(qw, my_extractor, GPT2Small_vs)
+        #print (answ)
+        #gpt_answ_list.append(answ)
         
-    with open('templ_answers1.pkl', 'wb') as f:
-        pickle.dump(templ_answ_list, f)
+    #with open('gpt_noinp_vs.pkl', 'wb') as f:
+        #pickle.dump(gpt_answ_list, f)
         
-    templ_answ_list = []
-    for ind, qw in enumerate(df['Question'].values):
-        print (ind, '\n\n')
-        answ = generate_one_answer(qw, my_extractor, GPT2Small)
-        print (answ)
-        templ_answ_list.append(answ)
+    #print ("gpt_noinp vs")
         
-    with open('gpt_answers1.pkl', 'wb') as f:
-        pickle.dump(templ_answ_list, f)
+    #gpt_answ_list = []
+    #for ind, qw in enumerate(df['Question'].values):
+        #print (ind, '\n\n')
+        #answ = generate_one_answer(qw, my_extractor, GPT2Small_vs)
+        #print (answ)
+        #gpt_answ_list.append(answ)
+        
+    #with open('gpt_noinp_vs_Sent.pkl', 'wb') as f:
+        #pickle.dump(gpt_answ_list, f)
+    
+    #print ("gpt_noinp vs sent")
                 
 
 if __name__ == "__main__":

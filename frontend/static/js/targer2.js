@@ -20,15 +20,17 @@ document.getElementById("button_label1").addEventListener('click',function ()
     document.getElementById("button_label1").innerHTML = "Processing";
     document.getElementById("button_label1").disabled = true;
     $("#button_label1").prop('disabled', true);
-    document.getElementById("displacy1").innerHTML = "Displacy";
+    document.getElementById("displacy1").innerHTML = "Wait";
+    $('#Outputt').val(" ")
     $.post("./label_text", {
         username: document.getElementById("labelTextt").value,
         classifier: document.getElementById("model").value,
+        extractor: document.getElementById("extractor").value,
     })
         .done(function (data) {
             document.getElementById("button_label1").disabled = false;
         document.getElementById("displacy1").innerHTML = "Searching ...";
-            document.getElementById("button_label1").innerHTML = "Answer11";
+            document.getElementById("button_label1").innerHTML = "Answer";
             $('#Outputt').val(data["full_answer"])
             document.getElementById("displacy1").innerHTML = "Extracting ..."
         
@@ -37,7 +39,6 @@ document.getElementById("button_label1").addEventListener('click',function ()
             var d = data["spans"]
             console.log("d")
             console.log(d)
-            $("#displacy1").text("Searching 0 ...");
             $("#displacy1").val(data["spans"])
             const text = document.getElementById("labelTextt").value;
             const spans = data["spans"];
@@ -49,6 +50,7 @@ document.getElementById("button_label1").addEventListener('click',function ()
         .fail(function (jqxhr, textStatus, error) {
             $('#Outputt').val("Something went wrong")
             var err = textStatus + ", " + error;
+            $('#Outputt').val(err)
             console.log("Request Failed: " + err);
             document.getElementById("button_label1").disabled = false;
             document.getElementById("button_label1").innerHTML = "Answer0";

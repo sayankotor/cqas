@@ -14,7 +14,7 @@ import torch
 """Models"""
 
 from generation.generation import diviner
-from my_functions import extractor
+from my_functions import extractor, extractorArora
 from my_functions import responser
 
 # Path to function with generative model
@@ -26,21 +26,31 @@ sys.path.insert(0, "/notebook/cqas/generation/pytorch_transformers")
 from cam_summarize import load_cam_model
 from text_gen_big import load_big_model
 from text_gen import load_small_model
+from ctrl_generation import initialize_model
+
+model_type = "ctrl" #PUT NAME OF NEEDED MODEL
+length = 200 #MODEL LENGTH
 
 import configparser
 config_parser = configparser.ConfigParser()
 config_parser.read('frontend/config.ini')
 config = config_parser['DEV']
 
-device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 LM_CAM = load_cam_model(device)
 Cam = diviner(tp = 'cam', model = LM_CAM, device = device)
 print ("loaded cam")
 
-device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
-LM_SMALL = load_small_model(device)
-GPT2Small = diviner(tp = 'small', model = LM_SMALL, device = device)
-print ("loaded gpt2")
+#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#LM_SMALL = load_small_model(device)
+#GPT2Small = diviner(tp = 'small', model = LM_SMALL, device = device)
+#print ("loaded gpt2")
+
+device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
+model, tokenizer, length = initialize_model(model_type, length, device = device)
+
+CTRL = diviner(tp = 'ctrl', model = model, device = device, tokenizer = tokenizer)
+print ("loaded ctrl")
 
 #device = torch.device("cuda:6" if torch.cuda.is_available() else "cpu")
 #LM_BIG, tokenizer_big = load_big_model(device)
@@ -48,8 +58,12 @@ print ("loaded gpt2")
 
 Templ = diviner(tp = 'templates', model = '', device = device)
 
-my_extractor = extractor(my_device = 4)
-print ("loaded extractor")
+my_extractor = extractor(my_device = 5)
+my_extractor_arora = extractorArora(my_device = 5)
+print ("loaded extractors")
+
+#my_extractor_arora = extractor_arora(my_device = 1)
+#print ("loaded extractor arora")
 
 class ReverseProxied(object):
     def __init__(self, app):
@@ -87,213 +101,413 @@ api = Api(app)
 @app.route('/')
 
 #def index():
+
+def make_response_with_exception_string(exception_string):
+    response = make_response(jsonify(full_answer = exception_string, spans = []))
+    response.headers['content-type'] = 'application/json'
+    return response
     
 
 class Answerer_cam(Resource):
     def post(self):
-        input_string = request.get_data().decode('UTF-8')
-        my_extractor.from_string(input_string)
-        print ("9")
-        my_responser = responser()
-        print ("9")
         try:
-            obj1, obj2, predicates = my_extractor.get_params()
+            input_string = request.get_data().decode('UTF-8')
+            my_extractor.from_string(input_string)
+            print ("9")
+            my_responser = responser()
+            print ("9")
+            try:
+                obj1, obj2, predicates = my_extractor.get_params()
+            except:
+                e = sys.exc_info()[0]
+                print ("Answerer CAM: exeption in extractor part ", str(sys.exc_info()))
+                return ("Answerer CAM: exeption in extractor part " + str(sys.exc_info()))
+            print ("9")
+            print ("len(obj1), len(obj2)", len(obj1), len(obj2))
+            print ("obj1, obj2, predicates", obj1, obj2, predicates)
+            print ("spans", my_extractor.spans)
+            if (len(obj1) > 0 and len(obj2) > 0):
+                response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CAM: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CAM: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+                try:
+                    my_diviner = Cam
+                    print (1)
+                    my_diviner.create_from_json(response_json, predicates)
+                    print (2)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CAM: exeption in diviner ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CAM: exeption in diviner " + str(sys.exc_info()))
+                try:
+                    answer = my_diviner.generate_advice()
+                    print ("answer0", answer)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CAM: exeption in answer generation ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CAM: exeption in answer generation " + str(sys.exc_info()))
+            elif (len(obj1) > 0 and len(obj2) == 0):
+                print ("len(obj1) > 0 and len(obj2) == 0")
+                response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                    my_diviner = Cam
+                    my_diviner.create_from_json(response_json, predicates)
+                    answer = my_diviner.generate_advice(is_object_single = True)
+                    print ("answer1", answer)  
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CAM: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CAM: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+            else:
+                answer = "We can't recognize objects for comparision"
+            response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
+            response.headers['content-type'] = 'application/json'
+            return response
         except:
-            return ("smth wrong in extractor, please try again")
-        print ("9")
-        print ("len(obj1), len(obj2)", len(obj1), len(obj2))
-        print ("obj1, obj2, predicates", obj1, obj2, predicates)
-        print ("spans", my_extractor.spans)
-        if (len(obj1) > 0 and len(obj2) > 0):
-            response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
-            try:
-                response_json = response.json()
-            except:
-                return ("smth wrong in response, please try again")
-            try:
-                my_diviner = Cam
-                print (1)
-                my_diviner.create_from_json(response_json, predicates)
-                print (2)
-            except:
-                return ("smth wrong in diviner, please try again")
-            try:
-                answer = my_diviner.generate_advice()
-                print ("answer0", answer)
-            except:
-                return ("smth wrong in answer generation, please try again")
-        elif (len(obj1) > 0 and len(obj2) == 0):
-            print ("len(obj1) > 0 and len(obj2) == 0")
-            response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
-            try:
-                response_json = response.json()
-                my_diviner = Cam
-                my_diviner.create_from_json(response_json, predicates)
-                answer = my_diviner.generate_advice(is_object_single = True)
-                print ("answer1", answer)  
-            except:
-                answer = "smth wrong in response, please try again"
-        else:
-            answer = "We can't recognize objects for comparision"
-        response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
-        response.headers['content-type'] = 'application/json'
-        return response
+            e = sys.exc_info()[0] 
+            print ("Answerer CAM: exeption", str(sys.exc_info()))
+            return make_response_with_exception_string("Answerer CAM: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
 
-
-class AnswererGPT2_big(Resource):
-    def post(self):
-        input_string  = request.get_data().decode('UTF-8')
-        print ("input string ", input_string)
-        my_extractor.from_string(input_string)
-        my_responser = responser()
-        try:
-            obj1, obj2, predicates = my_extractor.get_params()
-        except:
-            return ("smth wrong in extractor, please try again")
-        print ("len(obj1), len(obj2)", len(obj1), len(obj2))
-        print ("obj1, obj2, predicates", obj1, obj2, predicates)
-        if (len(obj1) > 0 and len(obj2) > 0):
-            response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
-            try:
-                response_json = response.json()
-            except:
-                return ("smth wrong in response, please try again")
-            try:
-                my_diviner = GPT2Small
-                print (1)
-                my_diviner.create_from_json(response_json, predicates)
-                print (2)
-            except:
-                return ("smth wrong in diviner, please try again")
-            try:
-                answer = my_diviner.generate_advice()
-                print ("answer0", answer)
-            except:
-                answer = "smth wrong in answer generation, please try again"
-        elif (len(obj1) > 0 and len(obj2) == 0):
-            print ("len(obj1) > 0 and len(obj2) == 0")
-            response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
-            try:
-                response_json = response.json()
-                my_diviner = GPT2Small
-                my_diviner.create_from_json(response_json, predicates)
-                answer = my_diviner.generate_advice(is_object_single = True)
-                print ("answer1", answer)  
-            except:
-                del my_extractor, my_responser, my_diviner
-                answer = "smth wrong in response, please try again"
-        else:
-            answer = "We can't recognize objects for comparision"
-        response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
-        del my_extractor, my_responser, my_diviner
-        response.headers['content-type'] = 'application/json'
-        return response
-    
 #class extract_objects(Resource)
     
 class AnswererGPT2_small(Resource):
     def post(self):
-        input_string = request.get_data().decode('UTF-8')
-        print ("input string ", input_string)
-        my_extractor.from_string(input_string)
-        print ("9")
-        my_responser = responser()
-        print ("9")
         try:
-            obj1, obj2, predicates = my_extractor.get_params()
+            input_string = request.get_data().decode('UTF-8')
+            print ("input string ", input_string)
+            my_extractor.from_string(input_string)
+            print ("9")
+            my_responser = responser()
+            print ("9")
+            try:
+                obj1, obj2, predicates = my_extractor.get_params()
+            except:
+                e = sys.exc_info()[0]
+                print ("Answerer CTRL: exeption in extractor part ", str(sys.exc_info()))
+                return ("Answerer CTRL: exeption in extractor part " + str(sys.exc_info()))
+            print ("9")
+            print ("len(obj1), len(obj2)", len(obj1), len(obj2))
+            print ("obj1, obj2, predicates", obj1, obj2, predicates)
+            if (len(obj1) > 0 and len(obj2) > 0):
+                response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CTRL: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CTRL: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+                try:
+                    my_diviner = CTRL
+                    print (1)
+                    my_diviner.create_from_json(response_json, predicates)
+                    print (2)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CTRL: exeption in diviner ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CTRL: exeption in diviner " + str(sys.exc_info()))
+                try:
+                    answer = my_diviner.generate_advice()
+                    print ("answer0", answer)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CTRL: exeption in answer generation ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CTRL: exeption in answer generation " + str(sys.exc_info()))
+            elif (len(obj1) > 0 and len(obj2) == 0):
+                print ("len(obj1) > 0 and len(obj2) == 0")
+                response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                    my_diviner = CTRL
+                    my_diviner.create_from_json(response_json, predicates)
+                    answer = my_diviner.generate_advice(is_object_single = True)
+                    print ("answer1", answer)  
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CTRL: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CTRL: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+            else:
+                answer = "We can't recognize objects for comparision"
+            response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
+            response.headers['content-type'] = 'application/json'
+            return response
         except:
-            return ("smth wrong in extractor, please try again")
-        print ("9")
-        print ("len(obj1), len(obj2)", len(obj1), len(obj2))
-        print ("obj1, obj2, predicates", obj1, obj2, predicates)
-        if (len(obj1) > 0 and len(obj2) > 0):
-            response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
-            try:
-                response_json = response.json()
-            except:
-                return ("smth wrong in response, please try again")
-            try:
-                my_diviner = GPT2Small
-                print (1)
-                my_diviner.create_from_json(response_json, predicates)
-                print (2)
-            except:
-                return ("smth wrong in diviner, please try again")
-            try:
-                answer = my_diviner.generate_advice()
-                print ("answer0", answer)
-            except:
-                return("smth wrong in answer generation, please try again")
-        elif (len(obj1) > 0 and len(obj2) == 0):
-            print ("len(obj1) > 0 and len(obj2) == 0")
-            response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
-            try:
-                response_json = response.json()
-                my_diviner = GPT2Small
-                my_diviner.create_from_json(response_json, predicates, tp = "small")
-                answer = my_diviner.generate_advice(is_object_single = True)
-                print ("answer1", answer)  
-            except:
-                return ("smth wrong in response, please try again")
-        else:
-            answer = "We can't recognize objects for comparision"
-        response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
-        response.headers['content-type'] = 'application/json'
-        return response
+            e = sys.exc_info()[0] 
+            print ("Answerer CTRL: exeption", str(sys.exc_info()))
+            return make_response_with_exception_string("Answerer CAM: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
 
 class Answerer_templates(Resource):
     def post(self):
-        input_string  = request.get_data().decode('UTF-8')
-        print ("input string ", input_string)
-        my_extractor.from_string(input_string)
-        print ("9")
-        my_responser = responser()
         try:
-            obj1, obj2, predicates = my_extractor.get_params()
+            input_string  = request.get_data().decode('UTF-8')
+            print ("input string ", input_string)
+            my_extractor.from_string(input_string)
+            print ("9")
+            my_responser = responser()
+            try:
+                obj1, obj2, predicates = my_extractor.get_params()
+            except:
+                e = sys.exc_info()[0] 
+                print ("Answerer TEMPL: exeption in object extraction ", str(sys.exc_info()))
+                return make_response_with_exception_string("Answerer TEMPL: exeption in object extraction " + str(sys.exc_info()))
+            print ("len(obj1), len(obj2)", len(obj1), len(obj2))
+            print ("obj1, obj2, predicates", obj1, obj2, predicates)
+            if (len(obj1) > 0 and len(obj2) > 0):
+                response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer TEMPL: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer TEMPL: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+                try:
+                    my_diviner = Templ
+                    print (1)
+                    my_diviner.create_from_json(response_json, predicates)
+                    print (2)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer TEMPL: exeption in diviner ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer TEMPL: exeption in diviner " + str(sys.exc_info()))
+                try:
+                    answer = my_diviner.generate_advice()
+                    print ("answer0", answer)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer TEMPL: exeption in answer generation ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer TEMPL: exeption in answer generation " + str(sys.exc_info()))
+            elif (len(obj1) > 0 and len(obj2) == 0):
+                print ("len(obj1) > 0 and len(obj2) == 0")
+                response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                    my_diviner = Templ
+                    my_diviner.create_from_json(response_json, predicates)
+                    answer = my_diviner.generate_advice(is_object_single = True)
+                    print ("answer1", answer)  
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer TEMPL: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer TEMPL: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+            else:
+                answer = "We can't recognize objects for comparision"
+            response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
+            response.headers['content-type'] = 'application/json'
+            return response
         except:
-            return ("smth wrong in extractor, please try again")
-        print ("len(obj1), len(obj2)", len(obj1), len(obj2))
-        print ("obj1, obj2, predicates", obj1, obj2, predicates)
-        if (len(obj1) > 0 and len(obj2) > 0):
-            response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+            e = sys.exc_info()[0] 
+            print ("Answerer Template: exeption", str(sys.exc_info()))
+            return make_response_with_exception_string("Answerer Templates: exeption " + str(sys.exc_info()))
+
+    
+class Answerer_cam_arora(Resource):
+    def post(self):
+        try:
+            input_string = request.get_data().decode('UTF-8')
+            my_extractor_arora.from_string(input_string)
+            print ("9")
+            my_responser = responser()
+            print ("9")
             try:
-                response_json = response.json()
+                obj1, obj2, predicates = my_extractor_arora.get_params()
             except:
-                return ("smth wrong in response, please try again")
-            try:
-                my_diviner = Templ
-                print (1)
-                my_diviner.create_from_json(response_json, predicates)
-                print (2)
-            except:
-                return ("smth wrong in diviner, please try again")
-            try:
-                answer = my_diviner.generate_advice()
-                print ("answer0", answer)
-            except:
-                return("smth wrong in answer generation, please try again")
-        elif (len(obj1) > 0 and len(obj2) == 0):
-            print ("len(obj1) > 0 and len(obj2) == 0")
-            response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
-            try:
-                response_json = response.json()
-                my_diviner = Templ
-                my_diviner.create_from_json(response_json, predicates)
-                answer = my_diviner.generate_advice(is_object_single = True)
-                print ("answer1", answer)  
-            except:
-                return("smth wrong in response, please try again")
-        else:
-            answer = "We can't recognize objects for comparision"
-        response = make_response(jsonify(full_answer = answer, spans = my_extractor.spans))
-        response.headers['content-type'] = 'application/json'
-        return response
+                e = sys.exc_info()[0]
+                print ("Answerer CAM: exeption in extractor part ", str(sys.exc_info()))
+                return ("Answerer CAM: exeption in extractor part " + str(sys.exc_info()))
+            print ("9")
+            print ("len(obj1), len(obj2)", len(obj1), len(obj2))
+            print ("obj1, obj2, predicates", obj1, obj2, predicates)
+            print ("spans", my_extractor_arora.spans)
+            if (len(obj1) > 0 and len(obj2) > 0):
+                response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CAM: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CAM: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+                try:
+                    my_diviner = Cam
+                    print (1)
+                    my_diviner.create_from_json(response_json, predicates)
+                    print (2)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CAM: exeption in diviner ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CAM: exeption in diviner " + str(sys.exc_info()))
+                try:
+                    answer = my_diviner.generate_advice()
+                    print ("answer0", answer)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CAM: exeption in answer generation ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CAM: exeption in answer generation " + str(sys.exc_info()))
+            elif (len(obj1) > 0 and len(obj2) == 0):
+                print ("len(obj1) > 0 and len(obj2) == 0")
+                response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                    my_diviner = Cam
+                    my_diviner.create_from_json(response_json, predicates)
+                    answer = my_diviner.generate_advice(is_object_single = True)
+                    print ("answer1", answer)  
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CAM: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CAM: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+            else:
+                answer = "We can't recognize objects for comparision"
+            response = make_response(jsonify(full_answer = answer, spans = my_extractor_arora.spans))
+            response.headers['content-type'] = 'application/json'
+            return response
+        except:
+            e = sys.exc_info()[0] 
+            print ("Answerer CAM: exeption", str(sys.exc_info()))
+            return make_response_with_exception_string("Answerer CAM: exeption " + str(sys.exc_info()))
 
 
-api.add_resource(AnswererGPT2_big, '/gpt_big')
+#class extract_objects(Resource)
+    
+class AnswererGPT2_small_arora(Resource):
+    def post(self):
+        try:
+            input_string = request.get_data().decode('UTF-8')
+            print ("input string ", input_string)
+            my_extractor_arora.from_string(input_string)
+            print ("9")
+            my_responser = responser()
+            print ("9")
+            try:
+                obj1, obj2, predicates = my_extractor_arora.get_params()
+            except:
+                e = sys.exc_info()[0]
+                print ("Answerer CTRL: exeption in extractor part ", str(sys.exc_info()))
+                return ("Answerer CTRL: exeption in extractor part " + str(sys.exc_info()))
+            print ("9")
+            print ("len(obj1), len(obj2)", len(obj1), len(obj2))
+            print ("obj1, obj2, predicates", obj1, obj2, predicates)
+            if (len(obj1) > 0 and len(obj2) > 0):
+                response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CTRL: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CTRL: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+                try:
+                    my_diviner = CTRL
+                    print (1)
+                    my_diviner.create_from_json(response_json, predicates)
+                    print (2)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CTRL: exeption in diviner ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CTRL: exeption in diviner " + str(sys.exc_info()))
+                try:
+                    answer = my_diviner.generate_advice()
+                    print ("answer0", answer)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CTRL: exeption in answer generation ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CTRL: exeption in answer generation " + str(sys.exc_info()))
+            elif (len(obj1) > 0 and len(obj2) == 0):
+                print ("len(obj1) > 0 and len(obj2) == 0")
+                response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                    my_diviner = CTRL
+                    my_diviner.create_from_json(response_json, predicates, tp = "ctrl")
+                    answer = my_diviner.generate_advice(is_object_single = True)
+                    print ("answer1", answer)  
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer CTRL: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer CTRL: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+            else:
+                answer = "We can't recognize objects for comparision"
+            response = make_response(jsonify(full_answer = answer, spans = my_extractor_arora.spans))
+            response.headers['content-type'] = 'application/json'
+            return response
+        except:
+            e = sys.exc_info()[0] 
+            print ("Answerer CTRL: exeption", str(sys.exc_info()))
+            return make_response_with_exception_string("Answerer CTRL: exeption" + str(sys.exc_info()))
+
+
+class Answerer_templates_arora(Resource):
+    def post(self):
+        try:
+            input_string  = request.get_data().decode('UTF-8')
+            print ("input string ", input_string)
+            my_extractor_arora.from_string(input_string)
+            print ("9")
+            my_responser = responser()
+            try:
+                obj1, obj2, predicates = my_extractor_arora.get_params()
+            except:
+                e = sys.exc_info()[0] 
+                print ("Answerer TEMPL: exeption in object extraction ", str(sys.exc_info()))
+                return make_response_with_exception_string("Answerer TEMPL: exeption in object extraction " + str(sys.exc_info()))
+            print ("len(obj1), len(obj2)", len(obj1), len(obj2))
+            print ("obj1, obj2, predicates", obj1, obj2, predicates)
+            if (len(obj1) > 0 and len(obj2) > 0):
+                response =  my_responser.get_response(first_object = obj1, second_object = obj2, fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer TEMPL: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer TEMPL: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+                try:
+                    my_diviner = Templ
+                    print (1)
+                    my_diviner.create_from_json(response_json, predicates)
+                    print (2)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer TEMPL: exeption in diviner ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer TEMPL: exeption in diviner " + str(sys.exc_info()))
+                try:
+                    answer = my_diviner.generate_advice()
+                    print ("answer0", answer)
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer TEMPL: exeption in answer generation ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer TEMPL: exeption in answer generation " + str(sys.exc_info()))
+            elif (len(obj1) > 0 and len(obj2) == 0):
+                print ("len(obj1) > 0 and len(obj2) == 0")
+                response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
+                try:
+                    response_json = response.json()
+                    my_diviner = Templ
+                    my_diviner.create_from_json(response_json, predicates)
+                    answer = my_diviner.generate_advice(is_object_single = True)
+                    print ("answer1", answer)  
+                except:
+                    e = sys.exc_info()[0] 
+                    print ("Answerer TEMPL: exeption in response to ltdemos.informatik.uni-hamburg.de ", str(sys.exc_info()))
+                    return make_response_with_exception_string("Answerer TEMPL: exeption in response to ltdemos.informatik.uni-hamburg.de " + str(sys.exc_info()))
+            else:
+                answer = "We can't recognize objects for comparision"
+            response = make_response(jsonify(full_answer = answer, spans = my_extractor_arora.spans))
+            response.headers['content-type'] = 'application/json'
+            return response
+        except:
+            e = sys.exc_info()[0] 
+            print ("Answerer Templates: exeption", str(sys.exc_info()))
+            return make_response_with_exception_string("Answerer Templates: exeption" + str(sys.exc_info()))
+
+
 api.add_resource(AnswererGPT2_small, '/gpt_small')
 api.add_resource(Answerer_templates, '/templates')
 api.add_resource(Answerer_cam, '/cam')
+api.add_resource(AnswererGPT2_small_arora, '/gpt_small_arora')
+api.add_resource(Answerer_templates_arora, '/templates_arora')
+api.add_resource(Answerer_cam_arora, '/cam_arora')
 #api.add_resource(Extractor1, '/extractor')
 
 

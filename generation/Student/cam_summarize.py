@@ -107,7 +107,7 @@ def load_cam_model(device):
         print (11, device)
         LM = RNNModel(30522, nlayers=2, dropout = 0.0)
         print (11)
-        LM.load_state_dict(torch.load(current_directory_path + '/wikitext_lm_finetuned'))
+        LM.load_state_dict(torch.load(current_directory_path + '/wikitext_lm_finetuned', map_location=lambda storage, loc: storage))
         print (12)
         LM = LM.to(device)
     except:

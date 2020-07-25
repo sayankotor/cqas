@@ -73,29 +73,43 @@ def create_api_url(endpoint):
 
 
 class Sender:
-    def send(self, text, generation_type):
+    def send(self, text, generation_type, extractor_type):
         print ("generation type", generation_type)
-        if generation_type == "template":
-            url = create_api_url("templates")
-        elif generation_type == "gpt_small":
-            url = create_api_url("gpt_small")
-        elif generation_type == "gpt_big":
-            url = create_api_url("gpt_big")
-        elif generation_type == "CAM summarize":
-            url = create_api_url("cam")
-        elif generation_type == "extractor":
-            url = create_api_url("extractor")        
+        print ("extractor_type", extractor_type)
+        if (extractor_type == 'Arora'):
+            if generation_type == "template":
+                url = create_api_url("templates_arora")
+            elif generation_type == "gpt_small_arora":
+                url = create_api_url("gpt_small")
+            elif generation_type == "gpt_big":
+                url = create_api_url("gpt_big")
+            elif generation_type == "CAM summarize":
+                url = create_api_url("cam_arora")
+            elif generation_type == "extractor":
+                url = create_api_url("extractor_arora")
+        else:
+            if generation_type == "template":
+                url = create_api_url("templates")
+            elif generation_type == "gpt_small":
+                url = create_api_url("gpt_small")
+            elif generation_type == "gpt_big":
+                url = create_api_url("gpt_big")
+            elif generation_type == "CAM summarize":
+                url = create_api_url("cam")
+            elif generation_type == "extractor":
+                url = create_api_url("extractor")        
 
         try:
             print ("url in sender try ", url)
             print ("text in sender try ", text)
-            r = requests.post(url, data=text)
+            r = requests.post(url, data=text, timeout=70)
             print ("reqerss")
             return r.json()
-        except JSONDecodeError:
-            print("!!!!", len(text), text)
+        except:
+            e = sys.exc_info()[0] 
+            print("some another error while backend requesting", str(sys.exc_info()))
             pass
-
+        
 
 sender = Sender()
 
@@ -117,7 +131,11 @@ def background_process_arg():
     # choose text generation type
     generator = request.form.get('classifier')
     print ("classifier", generator)
-    answer = sender.send(text, generator)
+    
+    extractor = request.form.get('extractor')
+    print ("extractor", extractor)
+    
+    answer = sender.send(text, generator, extractor)
     #doc = sender.send(text, classifier)
     print ("doc ttt !!!!", answer)
 

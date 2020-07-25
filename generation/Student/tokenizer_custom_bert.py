@@ -8,6 +8,7 @@ import re
 import unicodedata
 import six
 import tensorflow as tf
+tf.gfile = tf.io.gfile
 
 import os
 import logging
