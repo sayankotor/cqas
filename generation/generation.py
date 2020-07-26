@@ -5,10 +5,11 @@ sys.path.insert(0, "/notebook/cqas/generation/gpt-2-Pytorch")
 sys.path.insert(0, "/notebook/cqas/generation/Student")
 sys.path.insert(0, "/notebook/cqas/generation/pytorch_transformers")
 #from text_gen import text_generator_for_out
-from text_gen_big import text_generator_for_out_big
+#from text_gen_big import text_generator_for_out_big
 from text_gen import text_generator_for_out
 from cam_summarize import cam_summarize
 from template_generation import generate_template
+from ctrl_generation import generate_text_from_condition
 
 import spacy 
 nlp = spacy.load("en_core_web_sm") 
@@ -36,7 +37,9 @@ class diviner:
         self.json = response_json
         self.obj1 = response_json['object1']['name']
         self.obj2 = response_json['object2']['name']
-        print ("create fro json predicates", predicates)
+        self.sent1 = response_json['object1']['sentences'][0]['text']
+        self.sent2 = response_json['object2']['sentences'][0]['text']
+        print ("create from json predicates", predicates)
         if (len(predicates) > 0):
             self.predicate = predicates[0]
         else:
@@ -82,7 +85,7 @@ class diviner:
         print ("type ", self.type)
         
         if (is_object_single):
-            answer_begin = str(self.obj1) + " has undeniable advantages. "
+            answer_begin = str(self.obj1).title() + " has undeniable advantages. "
             answer_begin = answer_begin + "They are " + aspect_winner_str + '.'
         
             if (len(aspect_winner_str) == 0 and len(aspect_other_str) == 0):
@@ -96,17 +99,24 @@ class diviner:
         
         if (not is_object_single):
             if (len(self.predicate) == 0):
+                print ("self.predicate) == 0)")
                 self.predicate = 'better'
 
             if (len(self.predicate) > 0):
                 print ("self predicate ", self.predicate)
                 answer_begin = str('The %s is %s than %s. ' %(self.winner, self.predicate, self.other))
+                answer_begin_vs = str('%s vs. %s ' %(self.winner, self.other))
+                answer_begin_vs_sent = str(answer_begin_vs + self.sent1 + self.sent2)
+                answer_begin_sent = str(answer_begin + self.sent1 + " " + self.sent2)
                 answer_middle = ''
-                if (len(aspect_winner_str) > 1):
-                    answer_middle = 'The reason are ' + aspect_winner_str + '. '
-                if (len(aspect_winner_str) == 1):
-                    answer_middle = 'The reason is ' + aspect_winner_str + '. '
-                answer_begin = answer_begin + answer_middle
+                print ("answer_begin", answer_begin)
+                print ("answer_begin_ vs", answer_begin_vs)
+                print ("answer_begin_vs sent", answer_begin_vs_sent)
+                #if (len(aspect_winner_str) > 1):
+                    #answer_middle = 'The reason are ' + aspect_winner_str + '. '
+                #if (len(aspect_winner_str) == 1):
+                    #answer_middle = 'The reason is ' + aspect_winner_str + '. '
+                #answer_begin = answer_begin1 + answer_middle
                 print ("answer begin: ", answer_begin)
                 print ("self type", self.type)
 
@@ -125,19 +135,21 @@ class diviner:
                         comparing_pair['winner'] = response_json['object2']['name']
                         comparing_pair['loser'] = response_json['object1']['name']
                     print ("gen templates 2")
-                    answer_begin = generate_template(comparing_pair, mode="extended")
+                    answer_begin = answer_begin_sent#generate_template(comparing_pair, mode="extended")
                     print ("gen templates 3", answer_begin)
                     answer_end = ''
                     answer_end_str = ''
                 
                     
                 elif (self.type == "small"):
-                    print ("answer_begin small", answer_begin)
-                    answer_end = text_generator_for_out(answer_begin, self.model, device = self.device)
+                    print ("answer_begin small", answer_begin + "TL;DR:")
+                    answer_end = text_generator_for_out(answer_begin + "TL;DR:", self.model, device = self.device)
                     answer_end_str = ''.join(answer_end.splitlines()[:7])
                     print ("answer_end", answer_end)
+                    
                 elif (self.type == "big"):
                     print ("answer_begin big", answer_begin)
+                    answer_begin = ''
                     answer_end = text_generator_for_out_big(answer_begin, self.model, self.tokenizer)
                     print ("answer_end", answer_end)
                     answer_end_str = ''.join(answer_end.splitlines()[:7])
@@ -145,8 +157,22 @@ class diviner:
                 elif (self.type == 'cam'):
                     print ("answer_begin1 cam", answer_begin)
                     answer_end_str = cam_summarize(self.json, self.model, self.device)
-                    #answer_end_str = ''.join(answer_end)
+                    answer_end_str = ''.join(answer_end_str)
                     print ("answer_end1 cam", answer_end_str)
+                    
+                elif (self.type == 'ctrl'):
+                    model_type = "ctrl" #PUT NAME OF NEEDED MODEL
+                    length = 200 #MODEL LENGTH
+                    prompt_text = "Java vs Python"
+                    repetition_penalty = 1.2
+                    temperature = 0.2
+                    stop_token = None
+                    num_return_sequences = 5
+                    answer_begin = "Links What is better: {} or {}?".format(self.obj1, self.obj2)
+                    print ("ctrl answer begin1_ ", answer_begin)
+                    answer_end_str = generate_text_from_condition(self.model, self.tokenizer, length, answer_begin, repetition_penalty, temperature, num_return_sequences, 'gpt-2', stop_token="<|endoftext|>")[0]
+                    answer_begin = ''
+                    print ("ctrl answer end1 ", answer_end_str)
 
                 print ("full answer ", answer_begin + answer_end_str)
         return answer_begin + answer_end_str
