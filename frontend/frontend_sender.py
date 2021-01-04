@@ -6,6 +6,7 @@ from flasgger import Swagger, LazyString, LazyJSONEncoder
 from flask_restful import Api
 import json
 import sys
+import os
 import configparser
 import urllib.parse
 
@@ -16,7 +17,7 @@ import requests
 from elasticsearch import Elasticsearch
 import re
 import json
-sys.path.insert(0, "/notebook/cqas/")
+sys.path.insert(0, "/frontend/")
 #from my_functions import answerer
 
 """Spacy"""
@@ -25,9 +26,11 @@ import spacy
 # nlp = spacy.load('xx')
 # path = "/argsearch/"
 path = "./"
+path1 = os.path.dirname(__file__)
+print ("path1", path1)
 
 config_parser = configparser.ConfigParser()
-config_parser.read('config.ini')
+config_parser.read(path1+'/config.ini')
 config = config_parser['DEV']
 
 

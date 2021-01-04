@@ -5,7 +5,7 @@ from flask import Flask, jsonify, request
 from flasgger import Swagger, LazyString, LazyJSONEncoder
 from flask_restful import Api, Resource, reqparse
 from flask import make_response
-from nltk.tokenize import sent_tokenize, word_tokenize
+#from nltk.tokenize import sent_tokenize, word_tokenize
 import random
 import json
 from flask import jsonify
@@ -13,30 +13,35 @@ import json
 import torch
 """Models"""
 
-from generation.generation import diviner
-from my_functions import extractor, extractorArora
-from my_functions import responser
 
+from generation.generation import diviner
+from my_functions import responser
+from my_functions import extractorRoberta
 # Path to function with generative model
 import sys
-sys.path.insert(0, "/notebook/cqas/generation/gpt-2-Pytorch")
-sys.path.insert(0, "/notebook/cqas/generation/Student")
-sys.path.insert(0, "/notebook/cqas/generation/pytorch_transformers")
+import os
+module_path = os.path.dirname(__file__)
+print ("module_path", module_path)
+sys.path.insert(0, module_path + "/generation/gpt-2-Pytorch/")
+sys.path.insert(0, module_path + "/generation/Student/")
+sys.path.insert(0, module_path + "/generation/pytorch_transformers/")
 
-from cam_summarize import load_cam_model
-from text_gen_big import load_big_model
-from text_gen import load_small_model
-from ctrl_generation import initialize_model
+print (module_path + "/generation/gpt-2-Pytorch/")
+print (module_path + "/generation/Student/")
+
+from generation.Student.cam_summarize import load_cam_model
+#from text_gen_big import load_big_model
+#from text_gen import load_small_model
+from generation.Student.ctrl_generation import initialize_model
 
 model_type = "ctrl" #PUT NAME OF NEEDED MODEL
 length = 200 #MODEL LENGTH
-
 import configparser
 config_parser = configparser.ConfigParser()
-config_parser.read('frontend/config.ini')
+config_parser.read('/home/chekalina/cqas/frontend/config.ini')
 config = config_parser['DEV']
 
-device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 LM_CAM = load_cam_model(device)
 Cam = diviner(tp = 'cam', model = LM_CAM, device = device)
 print ("loaded cam")
@@ -46,7 +51,7 @@ print ("loaded cam")
 #GPT2Small = diviner(tp = 'small', model = LM_SMALL, device = device)
 #print ("loaded gpt2")
 
-device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model, tokenizer, length = initialize_model(model_type, length, device = device)
 
 CTRL = diviner(tp = 'ctrl', model = model, device = device, tokenizer = tokenizer)
@@ -58,8 +63,7 @@ print ("loaded ctrl")
 
 Templ = diviner(tp = 'templates', model = '', device = device)
 
-my_extractor = extractor(my_device = 5)
-my_extractor_arora = extractorArora(my_device = 5)
+my_extractor = extractorRoberta(my_device = device)
 print ("loaded extractors")
 
 #my_extractor_arora = extractor_arora(my_device = 1)
@@ -117,7 +121,7 @@ class Answerer_cam(Resource):
             my_responser = responser()
             print ("9")
             try:
-                obj1, obj2, predicates = my_extractor.get_params()
+                obj1, obj2, predicates, aspects = my_extractor.get_params()
             except:
                 e = sys.exc_info()[0]
                 print ("Answerer CAM: exeption in extractor part ", str(sys.exc_info()))
@@ -185,7 +189,7 @@ class AnswererGPT2_small(Resource):
             my_responser = responser()
             print ("9")
             try:
-                obj1, obj2, predicates = my_extractor.get_params()
+                obj1, obj2, predicates, aspects = my_extractor.get_params()
             except:
                 e = sys.exc_info()[0]
                 print ("Answerer CTRL: exeption in extractor part ", str(sys.exc_info()))
@@ -249,7 +253,7 @@ class Answerer_templates(Resource):
             print ("9")
             my_responser = responser()
             try:
-                obj1, obj2, predicates = my_extractor.get_params()
+                obj1, obj2, predicates, aspects = my_extractor.get_params()
             except:
                 e = sys.exc_info()[0] 
                 print ("Answerer TEMPL: exeption in object extraction ", str(sys.exc_info()))
