@@ -7,6 +7,7 @@ Please enter the question like "What is better bread or pizza ? " "What is cheap
 The example of answer, generated for the response "What is better tea or coffee?" 
 
 **Snippets:**
+
 "I did feel a bit more relaxed after drinking it too...I wonder if it was legitimate or just the product marketing? The taste is smooth and mellow with a slight hint of chocolate. It's heartier than regular tea and lighter (and better for your health) than coffee. Let the patient's taste decide. In general, the dry and dirty tongue always prefers tea to coffee, and will quite decline milk, unless with tea. Coffee is a better restorative than tea, but a greater impairer of the digestion."
 
 **CAM**
