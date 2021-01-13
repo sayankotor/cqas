@@ -2,6 +2,8 @@
 
 The current demo is here https://nlp.zhores.net/coqas/
 
+The highlighting video: 
+
 Please enter the question like "What is better bread or pizza ? " "What is cheaper for travelling plain or bus ?"
 
 The example of answer, generated for the response "What is better tea or coffee?" 
