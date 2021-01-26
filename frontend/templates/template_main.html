@@ -26,6 +26,8 @@
     </style>
 
     <link href="{{ path }}static/css/targer.css" rel="stylesheet">
+    <link href="{{ path }}static/css/progress.css" rel="stylesheet">
+    <link href="{{ path }}static/css/pbar.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ path }}static/css/ion.rangeSlider.css">
     <link rel="icon" href="data:;base64,=">
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
@@ -49,41 +51,25 @@
 
 
 <main role="main" class="container">
-
-    <nav>
-        <div class="nav nav-tabs" id="nav-tab" role="tablist">
-            <a class="nav-item nav-link active" id="nav-label-tab" data-toggle="tab" href="#nav-label" role="tab"
-               aria-controls="nav-label" aria-selected="true">Answer the question</a>
-        </div>
-    </nav>
-
     <div class="tab-content" id="nav-tabContent">
         <div class="tab-pane fade show active" id="nav-label" role="tabpanel" aria-labelledby="nav-label-tab">
 
 
             <div class="card content-block">
                 <div class="card-body">
-                    <h5 class="card-title">Enter the comparative question</h5>
+                    <h5 class="card-title">Enter a comparative question</h5>
                     <form>
                         <div class="form-row">
                             <div class="col-9">
                         <textarea class="form-control" id="labelTextt" rows="5">What is better for deep learning: Python or Matlab?</textarea>
-                        <textarea class="form-control" id="Outputt" rows="7" readonly></textarea>
                         </div>
                             <div class="col" style="margin-left: 15px">
                                 <div class="form-row">
                                     <label for="model">Model to generate with</label>
                                     <select class="form-control" id="model">
-                                        <option value="template">Templates</option>
-                                        <option value="CAM summarize">CAM: Text rank</option>
-                                        <option value="gpt_small">CTRL</option>
-                                    </select>
-                                </div>
-                                <div class="form-row">
-                                    <label for="extractor">Model to extract with</label>
-                                    <select class="form-control" id="extractor">
-                                        <option value="comparely">Comparely</option>
-                                        <option value="aurora">Arora</option>
+                                        <option value="Snippets">Snippet</option>
+                                        <option value="CAM">CAM</option>
+                                        <option value="Ctrl">CTRL</option>
                                     </select>
                                 </div>
                                 <div class="form-row">
@@ -109,15 +95,22 @@
             </div>
         </div>
     </div>
+
+    <div id="pbar" class="progress" style="position: relative;">
+        <div class="progress-bar progress-bar-striped indeterminate">
+        </div>
+    </div>
     
     <div id="displacy-container1" class="card content-block">
         <div class="card-body">
             <div id="displacy1"></div>
         </div>
     </div>
-
-    <div id="controls" class="card content-block">
-        
+    
+    <div id="displacy-container0" class="card content-block">
+          <div class="card-body">
+                <div id="displacy0"></div>
+            </div>
     </div>
 
 </main>

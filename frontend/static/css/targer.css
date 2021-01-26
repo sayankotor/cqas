@@ -152,8 +152,8 @@ body {
 }
 
 [data-entity][data-entity="pred"] {
-     background: rgba(224, 0, 132, 0.2);
-     border-color: rgb(224, 0, 132); 
+     background: rgba(11, 145, 145, 0.2);
+     border-color: rgb(11, 145, 145); 
 }
 
 [data-entity][data-entity="pred"]::after {
