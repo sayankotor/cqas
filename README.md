@@ -27,3 +27,10 @@ On the other hand:
 **CTRL**
 
 The answer to this question depends on the type of tea. If you are looking for a cup that has some caffeine and flavor, then go with green teas. Green teas have caffeine, but they also contain antioxidants which help prevent cancer cells. They can be used as an alternative to coffee because it does not produce any stomach upset like coffee. However, if you want something more relaxing than coffee, try black tea, especially when drinking in the evening. Black tea contains natural flavors, such as cinnamon, nutmeg, ginger, cloves, etc.
+
+
+Main backend module: backend_extr.py (used functionality in utils.py, my_functions.py, generation/generation.py)
+Main backend module: frontend/frontend_sender.py
+NLU part in NLU/
+NLG part in generation/
+If you have any question about code ans system architecture, plese write to sayankotor1@gmail.com
