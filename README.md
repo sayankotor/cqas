@@ -30,7 +30,11 @@ The answer to this question depends on the type of tea. If you are looking for a
 
 
 Main backend module: backend_extr.py (used functionality in utils.py, my_functions.py, generation/generation.py)
+
 Main backend module: frontend/frontend_sender.py
+
 NLU part in NLU/
+
 NLG part in generation/
+
 If you have any question about code ans system architecture, plese write to sayankotor1@gmail.com
