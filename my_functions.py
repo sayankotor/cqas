@@ -7,15 +7,10 @@ import sys
 import spacy
 import re
 
-import en_core_web_sm
-
 # for extractor class
 sys.path.append('/home/vika/targer')
 sys.path.append('/notebook/cqas')
 sys.path.append('/notebook/bert_sequence_sayankotor/src')
-from src.factories.factory_tagger import TaggerFactory
-from src.layers import layer_context_word_embeddings_bert
-from bert_sequence_tagger import sequence_tagger_bert
 
 # for responser class
 import json
@@ -32,6 +27,36 @@ current_directory_path = os.path.dirname(os.path.realpath(__file__))
 
 PATH_TO_PRETRAINED = '/external_pretrained_models/'
 MODEL_NAMES = ['bertttt.hdf5']
+
+# Roberta
+
+from typing import Dict, List, Sequence, Iterable
+import itertools
+import logging
+
+from overrides import overrides
+
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_utils import to_bioul
+from allennlp.data.fields import TextField, SequenceLabelField, Field, MetadataField
+from allennlp.data.instance import Instance
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.tokenizers import Token
+
+from allennlp.modules.token_embedders import PretrainedTransformerMismatchedEmbedder
+from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
+from allennlp.modules.seq2seq_encoders import PassThroughEncoder
+
+from allennlp.models import SimpleTagger
+from allennlp.data.token_indexers import PretrainedTransformerMismatchedIndexer
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.predictors import SentenceTaggerPredictor
+
+
+from allennlp.data.dataset_readers import Conll2003DatasetReader
+from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 
 def load(checkpoint_fn, gpu=-1):
     if not os.path.isfile(PATH_TO_PRETRAINED + checkpoint_fn):
@@ -50,27 +75,47 @@ def load(checkpoint_fn, gpu=-1):
 def create_sequence_from_sentence(str_sentences):
     return [re.findall(r"[\w']+|[.,!?;]", str_sentence.lower()) for str_sentence in str_sentences]
 
-class extractor:
-    def __init__(self, my_device = 6, model_name = 'bertttt.hdf5', model_path = current_directory_path + '/external_pretrained_models/'):
+class extractorRoberta:
+    def __init__(self, my_device = torch.device('cuda:2'), model_name = 'roberta.hdf5', model_path = current_directory_path + '/external_pretrained_models/'):
         self.answ = "UNKNOWN ERROR"
         self.model_name = model_name
         self.model_path = model_path
         self.first_object = ''
         self.second_object = ''
         self.predicates = ''
+        self.aspects = ''
+        cuda_device = my_device
         self.spans = [] # we can't use set because span object is dict and dict is unchashable. We add function add_span to keep non-repeatability
         try:
             print (self.model_path + self.model_name)
-            self.model = TaggerFactory.load(self.model_path + self.model_name, my_device)
-            print (111)
-            self.model.cuda(device=my_device)
-            self.model.gpu = my_device
-            print (111)
-            print ("extract_objects_predicates gpu", self.model.gpu)
+            print (model_path + "vocab_dir")
+            vocab= Vocabulary.from_files(model_path + "vocab_dir")
+            BERT_MODEL = 'google/electra-base-discriminator'
+            embedder = PretrainedTransformerMismatchedEmbedder(model_name=BERT_MODEL)
+            text_field_embedder = BasicTextFieldEmbedder({'tokens': embedder})
+            seq2seq_encoder = PassThroughEncoder(input_dim=embedder.get_output_dim())
+            print ("encoder loaded")
+            self.indexer = PretrainedTransformerMismatchedIndexer(model_name=BERT_MODEL)
+            print ("indexer loaded")
+            self.model = SimpleTagger(text_field_embedder=text_field_embedder, 
+                      vocab=vocab, 
+                      encoder=seq2seq_encoder,
+                      calculate_span_f1=True,
+                      label_encoding='IOB1').cuda(device=cuda_device)
+            self.model.load_state_dict(torch.load(self.model_path + self.model_name))
+            print ("model loaded")
+            self.reader = Conll2003DatasetReader(token_indexers={'tokens': self.indexer})
+            print ("reader loaded")
         except:
             e = sys.exc_info()[0]
             print ("exeption while mapping to gpu in extractor ", e)
             raise RuntimeError("Init extractor: can't map to gpu. Maybe it is OOM")
+        try:
+            self.predictor = SentenceTaggerPredictor(self.model, self.reader)
+        except:
+            e = sys.exc_info()[0]
+            print ("exeption in creating predictor ", e)
+            raise RuntimeError("Init extractor: can't map to gpu. Maybe it is WTF")
             
     def add_span(self, span_obj):
         if span_obj not in self.spans:
@@ -87,100 +132,89 @@ class extractor:
         self.first_object = ''
         self.second_object = ''
         self.predicates = ''
+        self.aspects = ''
         self.spans = []
         
     def get_objects_predicates(self, list_words, list_tags):
+        starts = set()
         obj_list = []
         pred_list = []
+        asp_list = []
         for ind, elem in enumerate(list_tags):
-            if elem == 'B-OBJ':
+            if elem == 'B-Object':
                 obj_list.append(list_words[ind])
-                start = self.input_str.lower().find(list_words[ind])
-                self.spans.append({'end': start + len(list_words[ind]), 'start': start, 'type': "OBJ" })
-            if elem == 'I-OBJ':
-                start = self.input_str.lower().find(list_words[ind])
-                self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "OBJ" })
-            if elem == 'B-PREDFULL':
+                start = self.input_str.find(list_words[ind])
+                while (start in starts):
+                    print (1)
+                    print ("ind, word", ind, list_words[ind])
+                    print ("old start, starts", start, starts)
+                    print ("string ", self.input_str[start + len(list_words[ind]):])
+                    start = self.input_str[start + len(list_words[ind]):].find(list_words[ind]) + start + len(list_words[ind])
+                    print ("new start", start)
+                if (start != -1 and {'end': start + len(list_words[ind]), 'start': start, 'type': "OBJ" } not in self.spans):
+                    self.spans.append({'end': start + len(list_words[ind]), 'start': start, 'type': "OBJ" })
+                    starts.add(start)
+            if elem == 'I-Object':
+                start = self.input_str.find(list_words[ind])
+                while (start in starts):
+                    start = self.input_str[start:].find(list_words[ind]) + start + len(list_words[ind])
+                if (start != -1 and {'end': start + len(list_words[ind]), 'start': start, 'type': "OBJ" } not in self.spans):
+                    self.spans.append({'end': start + len(list_words[ind]), 'start': start, 'type': "OBJ" })
+                    starts.add(start)
+            if elem == 'B-Predicate':
+                print (2)
+                print ("ind, word", ind, list_words[ind])
+                print ("old start, starts", start, starts)
+                print ("string ", self.input_str[start + len(list_words[ind]):])
                 pred_list.append(list_words[ind])
-                start = self.input_str.lower().find(list_words[ind])
+                start = self.input_str.find(list_words[ind] + " ")
+                while (start in starts):
+                    start = self.input_str[start  + len(list_words[ind]):].find(list_words[ind]) + start + len(list_words[ind])
+                if (start != -1 and { 'end': start + len(list_words[ind]), 'start': start, 'type': "PRED" } not in self.spans):
+                    self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "PRED" })
+                    starts.add(start)
+            if elem == 'I-Predicate':
+                start = self.input_str.find(list_words[ind])
                 self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "PRED" })
-            if elem == 'I-PREDFULL':
-                start = self.input_str.lower().find(list_words[ind])
-                self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "PRED" })
-        return obj_list, pred_list
+                while (start in starts):
+                    start = self.input_str[start:].find(list_words[ind]) + start + len(list_words[ind])
+                if (start != -1 and { 'end': start + len(list_words[ind]), 'start': start, 'type': "PRED" } not in self.spans):
+                    self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "PRED" })
+                    starts.add(start)
+            if elem == 'I-Aspect':
+                asp_list.append(list_words[ind])
+                start = self.input_str.find(list_words[ind])
+                while (start in starts):
+                    start = self.input_str[start:].find(list_words[ind]) + start + len(list_words[ind])
+                if (start != -1 and {'end': start + len(list_words[ind]), 'start': start, 'type': "ASP" } not in self.spans):
+                    self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "ASP" })
+                    starts.add(start)
+            if elem == 'B-Aspect':
+                asp_list.append(list_words[ind])
+                start = self.input_str.find(list_words[ind])
+                while (start in starts):
+                    start = self.input_str[start:].find(list_words[ind]) + start + len(list_words[ind])
+                if (start != -1 and {'end': start + len(list_words[ind]), 'start': start, 'type': "ASP" } not in self.spans):
+                    self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "ASP" })
+                    starts.add(start)
+        return obj_list, pred_list, asp_list
     
-    def extract_objects_predicates(self, input_sentence):
-        words = create_sequence_from_sentence([input_sentence])  
-        tags = self.model.predict_tags_from_words(words)
-        print ("extract_objects_predicates tags", tags[0])
-        print ("extract_objects_predicates words", words[0])
-        objects, predicates = self.get_objects_predicates(words[0], tags[0])
+    def extract_objects_predicates(self, input_string):
+        preds = self.predictor.predict(input_string)
+        print ("extract_objects_predicates tags", preds['tags'])
+        print ("extract_objects_predicates words", preds['words'])
+        objects, predicates, aspects = self.get_objects_predicates(preds['words'], preds['tags'])
         print (objects)
         print (predicates)
+        print (aspects)
         self.predicates = predicates
+        self.aspects = aspects
         print ("len(objects)", len(objects))
         if len(objects) >= 2:
             self.first_object = objects[0]
             self.second_object = objects[1]
         else: # try to use spacy
-            
-            if len(objects) == 1:
-                self.first_object = objects[0]
-                self.second_object = ''
-            
-            print("We try to use spacy")
-            nlp = spacy.load("en_core_web_sm")
-            doc = nlp(input_sentence)
-            tokens = [token.text for token in doc]
-            split_sent = words[0]
-            
-            if (len(self.predicates) == 0):
-                print ("pand")
-                for ind, token in enumerate(doc):
-                    if (doc[ind].tag_ == 'JJR' or doc[ind].tag_ == 'RBR'):
-                        print ("pand 0")
-                        self.predicates = [doc[ind].text]
-                        self.add_span({'end': self.input_str.lower().find(doc[ind].text) + len(doc[ind].text), 'start': self.input_str.lower().find(doc[ind].text), 'type': "PRED" })
-                        break
-            
-            if 'or' in split_sent:
-                comp_elem = 'or'
-            elif 'vs' in split_sent:
-                comp_elem = 'vs'
-            elif 'vs.' in split_sent:
-                comp_elem = 'vs.'
-            else:
-                self.answ = "We can't recognize two objects for compare 0"
-                return
-            print ("comp_elem", comp_elem)
-            print ("tokens", tokens)
-            if (comp_elem in tokens):
-                print ("comp elem in tokens")
-                or_index = tokens.index(comp_elem)               
-                if (len (doc.ents) >= 2):
-                    for ent in doc.ents:
-                        if (ent.end == or_index):
-                            self.first_object = ent.text
-                            self.add_span({'end': ent.end,'start': ent.start, 'type': "OBJ" })
-                        if (ent.start == or_index + 1):
-                            self.second_object = ent.text
-                            self.add_span({'end': ent.end, 'start': ent.start, 'type': "OBJ" })
-                            
-
-                else:
-                    print ("or simple split_sent", or_index)
-                    try:
-                        obj1 = tokens[or_index - 1] # tokens are uppercase. self.input_str is uppercase
-                        obj2 = tokens[or_index + 1]
-                        print (obj1, obj2)
-                        self.first_object = obj1
-                        self.second_object = obj2
-                        self.add_span({'end': self.input_str.find(obj1) + len(obj1), 'start': self.input_str.find(obj1), 'type': "OBJ" })
-                        self.add_span({'end': self.input_str.find(obj2) + len(obj2), 'start': self.input_str.find(obj2), 'type': "OBJ" })
-                    except:
-                        self.answ = "We can't recognize two objects for compare 1" 
-            else:
-                self.answ = "We can't recognize two objects for compare 2" 
+            self.answ = "We can't recognize two objects for compare 2" 
                 
     def get_params(self):
         print ("in extractor get params 0")
@@ -188,181 +222,8 @@ class extractor:
         self.extract_objects_predicates(self.input_str)
         #except:
             #raise RuntimeError("Can't map to gpu. Maybe it is OOM")
-        return self.first_object.strip(".,!/?"), self.second_object.strip(".,!/?"), self.predicates
+        return self.first_object.strip(".,!/?"), self.second_object.strip(".,!/?"), self.predicates, self.aspects
     
-    
-class extractorArtem(extractor):
-     def __init__(self, my_device = 1, model_name = "artem_bert.hdf5", model_path = current_directory_path + '/external_pretrained_models/'):
-        self.answ = "UNKNOWN ERROR"
-        self.model_name = model_name
-        self.model_path = model_path
-        self.first_object = ''
-        self.second_object = ''
-        self.predicates = ''
-        self.spans = [] # we can't use set because span object is dict and dict is unchashable. We add function add_span to keep non-repeatability
-        try:
-            print (self.model_path + self.model_name)
-            tagger = torch.load(self.model_path + self.model_name)
-            self.model = tagger
-        except: # catch *all* exceptions
-            e = sys.exc_info()[0]
-            print ("exeption while extracting to gpu ", str(sys.exc_info()))
-        try:
-            print (111)
-            self.model.cuda(device=my_device)
-            self.model.gpu = my_device
-            print (111)
-            print ("extract_objects_predicates gpu", str(sys.exc_info()))
-        except:
-            e = sys.exc_info()[0]
-            print (type(sys.exc_info()))
-            print (type(e))
-            print (str(sys.exc_info()))
-            print (str(e))
-            print ("exeption while mapping to gpu in SeqBert ", str(sys.exc_info()))
-            raise RuntimeError("Init extractor. Maybe it is OOM")
-
-     def predict_string(self, tokens):
-        print ("tokens")
-        print (tokens)
-        _, max_len, token_ids, token_masks, bpe_masks = self.model._make_tokens_tensors([tokens], self.model._max_len)
-        label_ids = None
-        loss_masks = None
-
-        with torch.no_grad():
-            token_ids = token_ids.cuda(device=self.model.gpu)
-            token_masks = token_masks.cuda(device=self.model.gpu)
-            #loss_masks = loss_masks.cuda(device=self.model.gpu)
-            
-            print ("x")
-
-            logits = self.model._bert_model(token_ids, 
-                                      token_type_ids=None,
-                                      attention_mask=token_masks,
-                                      labels=label_ids,
-                                      loss_mask=loss_masks)
-            print ("xxx")
-            logits = logits[0]
-            print ("xxxx")
-            b_preds, prob = self.model._logits_to_preds(logits.cpu(), bpe_masks, tokens)
-
-        print ("bpreds", b_preds)
-        return b_preds
-    
-            
-     def extract_objects_predicates(self, input_sentence):
-        words = create_sequence_from_sentence([input_sentence])   
-        tags = self.predict_string(words[0])
-        print ("extract_objects_predicates tags", tags[0])
-        print ("extract_objects_predicates words", words[0])
-        objects, predicates = self.get_objects_predicates(words[0], tags[0])
-        print (objects)
-        print (predicates)
-        self.predicates = predicates
-        print ("len(objects)", len(objects))
-        if len(objects) >= 2:
-            self.first_object = objects[0]
-            self.second_object = objects[1]
-        else: # try to use spacy
-            
-            if len(objects) == 1:
-                self.first_object = objects[0]
-                self.second_object = ''
-            
-            print("We try to use spacy")
-            nlp = spacy.load("en_core_web_sm")
-            doc = nlp(input_sentence)
-            tokens = [token.text for token in doc]
-            split_sent = words[0]
-            
-            if (len(self.predicates) == 0):
-                print ("pand")
-                for ind, token in enumerate(doc):
-                    if (doc[ind].tag_ == 'JJR' or doc[ind].tag_ == 'RBR'):
-                        print ("pand 0")
-                        self.predicates = [doc[ind].text]
-                        self.add_span({'end': self.input_str.lower().find(doc[ind].text) + len(doc[ind].text), 'start': self.input_str.lower().find(doc[ind].text), 'type': "PRED" })
-                        break
-            
-            if 'or' in split_sent:
-                comp_elem = 'or'
-            elif 'vs' in split_sent:
-                comp_elem = 'vs'
-            elif 'vs.' in split_sent:
-                comp_elem = 'vs.'
-            else:
-                self.answ = "We can't recognize two objects for compare 0"
-                return
-            print ("comp_elem", comp_elem)
-            print ("tokens", tokens)
-            if (comp_elem in tokens):
-                print ("comp elem in tokens")
-                or_index = tokens.index(comp_elem)               
-                if (len (doc.ents) >= 2):
-                    for ent in doc.ents:
-                        if (ent.end == or_index):
-                            self.first_object = ent.text
-                            self.add_span({'end': ent.end,'start': ent.start, 'type': "OBJ" })
-                        if (ent.start == or_index + 1):
-                            self.second_object = ent.text
-                            self.add_span({'end': ent.end, 'start': ent.start, 'type': "OBJ" })
-                            
-
-                else:
-                    print ("or simple split_sent", or_index)
-                    try:
-                        obj1 = tokens[or_index - 1] # tokens are uppercase. self.input_str is uppercase
-                        obj2 = tokens[or_index + 1]
-                        print (obj1, obj2)
-                        self.first_object = obj1
-                        self.second_object = obj2
-                        self.add_span({'end': self.input_str.find(obj1) + len(obj1), 'start': self.input_str.find(obj1), 'type': "OBJ" })
-                        self.add_span({'end': self.input_str.find(obj2) + len(obj2), 'start': self.input_str.find(obj2), 'type': "OBJ" })
-                    except:
-                        self.answ = "We can't recognize two objects for compare 1" 
-            else:
-                self.answ = "We can't recognize two objects for compare 2" 
-    
-class extractorArora(extractor):
-    def __init__(self, my_device = 6, model_name = 'Aurora.hdf5', model_path = current_directory_path + '/external_pretrained_models/'):
-        self.answ = "UNKNOWN ERROR"
-        self.model_name = model_name
-        self.model_path = model_path
-        self.first_object = ''
-        self.second_object = ''
-        self.predicates = ''
-        self.spans = [] # we can't use set because span object is dict and dict is unchashable. We add function add_span to keep non-repeatability
-        try:
-            self.model = TaggerFactory.load(self.model_path + self.model_name, my_device)
-            self.model.cuda(device=my_device)
-            self.model.gpu = my_device
-            print ("extract_objects_predicates gpu", self.model.gpu)
-        except:
-            e = sys.exc_info()[0]
-            print ("exeption while mapping to gpu in extractorArora ", e)
-            raise RuntimeError("Init extractor: can't map to gpu. Maybe it is OOM")
-            
-        
-    def get_objects_predicates(self, list_words, list_tags):
-        obj_list = []
-        pred_list = []
-        asp_list = []
-        for ind, elem in enumerate(list_tags):
-            if elem == 'PROD1':
-                obj_list.append(list_words[ind])
-                start = self.input_str.lower().find(list_words[ind])
-                self.spans.append({'end': start + len(list_words[ind]), 'start': start, 'type': "OBJ" })
-            if elem == 'PROD2':
-                start = self.input_str.lower().find(list_words[ind])
-                self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "OBJ" })
-            if elem == 'PRED':
-                pred_list.append(list_words[ind])
-                start = self.input_str.lower().find(list_words[ind])
-                self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "PRED" })
-            if elem == 'ASP':
-                start = self.input_str.lower().find(list_words[ind])
-                self.spans.append({ 'end': start + len(list_words[ind]), 'start': start, 'type': "ASP" })
-        return obj_list, pred_list
     
 class responser:
     def __init__(self):
@@ -394,10 +255,10 @@ class responser:
         return response
     
 def answerer(input_string, tp = 'big'):
-    my_extractor = extractor()
+    my_extractor = extractorRoberta()
     my_extractor.from_string(input_string)
     my_responser = responser()
-    obj1, obj2, predicates = my_extractor.get_params()
+    obj1, obj2, predicates, aspects = my_extractor.get_params()
     print ("len(obj1), len(obj2)", len(obj1), len(obj2))
     print ("obj1, obj2, predicates", obj1, obj2, predicates)
     if (len(obj1) > 0 and len(obj2) > 0):
@@ -426,7 +287,7 @@ def answerer(input_string, tp = 'big'):
         response =  my_responser.get_response(first_object = obj1, second_object = 'and', fast_search=True, aspects = predicates, weights = [1 for predicate in predicates])
         try:
             response_json = response.json()
-            my_diviner = diviner(tp = "big")
+            my_diviner = diviner(tp = tp)
             my_diviner.create_from_json(response_json, predicates)
             answer = my_diviner.generate_advice(is_object_single = True)
             print ("answer", answer)
@@ -437,3 +298,5 @@ def answerer(input_string, tp = 'big'):
             return ("smth wrong in response, please try again")
     else:
         return ("We can't recognize objects for comparision")
+    
+    
