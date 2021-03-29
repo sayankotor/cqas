@@ -142,7 +142,7 @@ pycparser==2.19
 pydicom==1.2.2
 pydot==1.2.3
 pyflakes==2.0.0
-Pygments==2.2.0
+Pygments==2.7.4
 pygpu==0.7.6
 pyOpenSSL==18.0.0
 pyparsing==2.3.0
