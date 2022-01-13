@@ -122,7 +122,7 @@ patsy==0.5.1
 pbr==5.1.0
 pexpect==4.6.0
 pickleshare==0.7.5
-Pillow==5.4.1
+Pillow==9.0.0
 Pillow-SIMD==5.3.0.post0
 pkginfo==1.4.2
 plac==0.9.6
