@@ -208,7 +208,7 @@ tqdm==4.28.1
 traitlets==4.3.2
 typing==3.6.6
 typing-extensions==3.6.6
-ujson==1.35
+ujson==5.2.0
 Unidecode==1.0.22
 urllib3==1.22
 wasabi==0.5.0
