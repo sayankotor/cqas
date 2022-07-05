@@ -29,5 +29,5 @@ sklearn==0.0
 skorch==0.6.0
 tables==3.6.1
 transformers==4.0
-ujson==1.35
+ujson==5.4.0
 xgboost==0.90
