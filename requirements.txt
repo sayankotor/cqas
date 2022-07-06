@@ -57,7 +57,7 @@ graphviz==0.10.1
 greenlet==0.4.15
 grpcio==1.16.1
 h5py==2.9.0
-html5lib==0.9999999
+html5lib==0.999999999
 hypothesis==3.82.1
 idna==2.7
 imageio==2.4.1
