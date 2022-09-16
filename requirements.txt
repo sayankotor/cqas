@@ -84,7 +84,7 @@ Keras-Preprocessing==1.1.0
 kiwisolver==1.0.1
 libarchive-c==2.8
 lmdb==0.94
-Mako==1.0.7
+Mako==1.2.2
 Markdown==3.0.1
 MarkupSafe==1.0
 matplotlib==3.0.1
